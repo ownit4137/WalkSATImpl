@@ -1,5 +1,6 @@
 #include "sat.h"
 
+// hello
 SATInstance::SATInstance(std::string path){
 	std::vector<cls>* vectorClauseStore;
 	std::vector<lit>* vectorLiteralStore;
@@ -528,7 +529,9 @@ void SATInstance::WalkSat(){
 
 					for(size_t c = 0; c < LiteralList[var_idx-1].size(); c++){
 						int clause_idx = (LiteralList[var_idx-1][c] > 0) ? LiteralList[var_idx-1][c] : -LiteralList[var_idx-1][c];
-						if( (var_assignment[var_idx-1] == true && LiteralList[var_idx-1][c] > 0) ||	(var_assignment[var_idx-1] == false && LiteralList[var_idx-1][c] < 0) ){
+						if( (var_assignment[var_idx-1] == true && 
+							LiteralList[var_idx-1][c] > 0) ||	
+							(var_assignment[var_idx-1] == false && LiteralList[var_idx-1][c] < 0) ){
 						}
 						else{
 							if( ClauseCost[clause_idx-1] - 1 == 0 ){
@@ -581,7 +584,8 @@ void SATInstance::WalkSat(){
 
 			for(size_t c = 0; c < LiteralList[var_idx-1].size(); c++){
 				int clause_idx = (LiteralList[var_idx-1][c] > 0) ? LiteralList[var_idx-1][c] : -LiteralList[var_idx-1][c];
-				if( (var_assignment[var_idx-1] == true && LiteralList[var_idx-1][c] > 0) ||	(var_assignment[var_idx-1] == false && LiteralList[var_idx-1][c] < 0) ){
+				if( (var_assignment[var_idx-1] == true && LiteralList[var_idx-1][c] > 0) ||	
+				(var_assignment[var_idx-1] == false && LiteralList[var_idx-1][c] < 0) ){
 					if( ClauseCost[clause_idx-1] == 0 ){
 						std::set<int>::iterator it = unsat_list.find(clause_idx-1);
 						if( it == unsat_list.end() ){
@@ -668,6 +672,17 @@ void SATInstance::WalkSat(){
 //#endif
 
 }
+
+
+
+
+
+
+
+
+
+
+
 
 bool SATInstance::solve(int decisionPolicy){
 
