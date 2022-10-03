@@ -1,0 +1,2 @@
+compile: g++ -g -std=c++17 -fsanitize=address -O3 -Wall -Isrc src/sat.cpp src/main.cpp -o test.out
+run: ./test.out test/n_queens4.dimacs 0
