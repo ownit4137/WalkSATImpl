@@ -1,3 +1,5 @@
+CFLAGS = -g -Wall -std=c++11
+
 test.out: main.o kcs.o
 	g++ -o test.out main.o kcs.o
 
