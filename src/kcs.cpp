@@ -25,11 +25,11 @@ SAT_KCS::SAT_KCS(std::string path){
 		std::string firstLit;
 		int firstLitVal;
 		int nextLitVal;
-		int i = 0;
+		int clauseCounted = 0;
 		std::cout << numLiterals << numClauses << " Initialization\n";
 		while (!fileDIMACS.eof()) {
 			fileDIMACS >> firstLitVal;
-			std::cout << i <<"st line\n";
+			std::cout << clauseCounted <<"st line " << firstLitVal << "\n";
 			if (fileDIMACS.eof()) {
 				break;
 			}
@@ -38,16 +38,29 @@ SAT_KCS::SAT_KCS(std::string path){
 				continue;
 			}
 
+			ClauseList[i].push_back(firstLitVal);
+			if (firstLitVal > 0) {
+				LiteralList[firstLitVal - 1].push_back(clauseCounted);
+			} else {
+				LiteralList[-firstLitVal - 1].push_back(-clauseCounted);
+			}
+			// vectorLiteralStore?
+
+
 			while (true) {
 				fileDIMACS >> nextLitVal;
 				if (nextLitVal == 0){
 					break;
 				}
-				ClauseList[i].push_back(nextLitVal);
-				LiteralList[nextLitVal].push_back(i);
 
+				ClauseList[i].push_back(nextLitVal);
+				if (firstLitVal > 0) {
+					LiteralList[nextLitVal - 1].push_back(clauseCounted);
+				} else {
+					LiteralList[-nextLitVal - 1].push_back(-clauseCounted);
+				}
 			}
-			i++;
+			clauseCounted++;
 		}
 		/*
 		while(!fileDIMACS.eof()){
