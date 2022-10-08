@@ -4,7 +4,7 @@ SAT_KCS::SAT_KCS(std::string path){
 	int numClauses, numLiterals;
 	std::ifstream fileDIMACS(path);
 
-	cout << "Start\n";
+	std::cout << "Start\n";
 	if(fileDIMACS.is_open()){
 		std::string line;
 		
@@ -26,14 +26,14 @@ SAT_KCS::SAT_KCS(std::string path){
 		int firstLitVal;
 		int nextLitVal;
 		int i = 0;
-		cout << "Initialization\n";
+		std::cout << "Initialization\n";
 		while(!fileDIMACS.eof()){
 			fileDIMACS >> firstLit;
-			cout << i <<"nst line\n";
+			std::cout << i <<"nst line\n";
 			
 			// comment
 			if (firstLit[0] == 'c'){
-				cout << "comment\n";
+				std::cout << "comment\n";
 				while (!fileDIMACS.eof()){
 					getline(fileDIMACS, line);
 				}
