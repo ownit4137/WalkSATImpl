@@ -13,5 +13,5 @@ clean:
 	rm -f *.o *.out
 
 run:
-	./test.out test/n_queens4.dimacs 0
+	./test.out ../test/n_queens4.dimacs 0
 
