@@ -1,6 +1,5 @@
 #include "sat.h"
 
-// hello
 SATInstance::SATInstance(std::string path){
 	std::vector<cls>* vectorClauseStore;
 	std::vector<lit>* vectorLiteralStore;
