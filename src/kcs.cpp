@@ -26,8 +26,31 @@ SAT_KCS::SAT_KCS(std::string path){
 		int firstLitVal;
 		int nextLitVal;
 		int i = 0;
-		std::cout << "Initialization\n";
+		std::cout << numLiterals << numClauses << " Initialization\n";
+		while (!fileDIMACS.eof()) {
+			fileDIMACS >> firstLitVal;
+			if (fileDIMACS.eof()) {
+				break;
+			}
+			if (fileDIMACS.bad()) {
+				getline(fileDIMACS, line);
+				continue;
+			}
+
+			while (true) {
+				fileDIMACS >> nextLitVal;
+				if (nextLitVal == 0){
+					break;
+				}
+				ClauseList[i].push_back(nextLitVal);
+				LiteralList[nextLitVal].push_back(i);
+
+			}
+			i++;
+		}
+		/*
 		while(!fileDIMACS.eof()){
+		
 			fileDIMACS >> firstLit;
 			std::cout << i <<"nst line\n";
 			
@@ -40,8 +63,7 @@ SAT_KCS::SAT_KCS(std::string path){
 				break;
 			}
 
-			firstLitVal = firstLit[1] - '0';
-			firstLitVal = firstLit[0] == '-' ? -firstLitVal : firstLitVal;
+			firstLitVal = firstLit[0] == '-' ? -(firstLit[1] - '0') : fistLit[0];
 			ClauseList[i].push_back(firstLitVal);
 			LiteralList[firstLitVal].push_back(i);
 			
@@ -56,7 +78,7 @@ SAT_KCS::SAT_KCS(std::string path){
 			}
 			i++;
 		}
-
+		*/
 
 
 
