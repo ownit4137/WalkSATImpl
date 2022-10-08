@@ -30,7 +30,7 @@ typedef int cls;
 class SAT_KCS{
 	private:
 	public:
-		SATInstance(std::string path);
+		SAT_KCS(std::string path);
 		//kcs
 		std::vector<std::vector<int> > ClauseList;
 		std::vector<int> ClauseCost;

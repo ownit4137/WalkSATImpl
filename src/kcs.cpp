@@ -1,6 +1,6 @@
 #include "sat.h"
 
-SAT_KCS::SATInstance(std::string path){
+SAT_KCS::SAT_KCS(std::string path){
 	int numClauses, numLiterals;
 	std::ifstream fileDIMACS(path);
 
