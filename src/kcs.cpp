@@ -32,12 +32,12 @@ SAT_KCS::SAT_KCS(std::string path){
 			if (fileDIMACS.eof()) {
 				break;
 			}
-			if (fileDIMACS.bad()) {
+			if (!fileDIMACS.good()) {
 				getline(fileDIMACS, line);
 				continue;
 			}
 			std::cout << clauseCounted <<"st line " << firstLitVal << "\n";
-			
+
 			ClauseList[clauseCounted].push_back(firstLitVal);
 			if (firstLitVal > 0) {
 				LiteralList[firstLitVal - 1].push_back(clauseCounted);
