@@ -1,6 +1,6 @@
 #include "sat.h"
 
-SAT_KCS::SATInstance(std::string path){
+SAT_KCS::inst(std::string path){
 	int numClauses, numLiterals;
 	std::ifstream fileDIMACS(path);
 
@@ -58,7 +58,7 @@ SAT_KCS::SATInstance(std::string path){
 
 
 
-
+		/*
 		getline(fileDIMACS, line);
 
 
@@ -289,7 +289,8 @@ SAT_KCS::SATInstance(std::string path){
 		delete[] vectorClauseStore;
 		delete[] vectorLiteralStore;
 		initialized = true;
-	}else{
+		*/
+	} else {
 		std::cerr << "Cannot open file: " << path << "\n";
 		initialized = false;
 	}
