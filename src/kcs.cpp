@@ -16,8 +16,8 @@ SAT_KCS::SAT_KCS(std::string path){
 		fileDIMACS >> numClauses;	// nc
 		// numClauses = stoi(line);
 
-		LiteralList.resize(numLiterals);
-		ClauseList.resize(numClauses);
+		LiteralList.resize(numLiterals, vector<int>(0));
+		ClauseList.resize(numClauses, vector<int>(0));
 		ClauseCost.resize(numClauses);
 		std::fill(ClauseCost.begin(), ClauseCost.end(), 0);
 
@@ -29,6 +29,7 @@ SAT_KCS::SAT_KCS(std::string path){
 		std::cout << numLiterals << numClauses << " Initialization\n";
 		while (!fileDIMACS.eof()) {
 			fileDIMACS >> firstLitVal;
+			std::cout << i <<"st line\n";
 			if (fileDIMACS.eof()) {
 				break;
 			}
