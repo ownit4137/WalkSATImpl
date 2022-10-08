@@ -38,7 +38,7 @@ SAT_KCS::SAT_KCS(std::string path){
 				continue;
 			}
 
-			ClauseList[i].push_back(firstLitVal);
+			ClauseList[clauseCounted].push_back(firstLitVal);
 			if (firstLitVal > 0) {
 				LiteralList[firstLitVal - 1].push_back(clauseCounted);
 			} else {
@@ -53,8 +53,8 @@ SAT_KCS::SAT_KCS(std::string path){
 					break;
 				}
 
-				ClauseList[i].push_back(nextLitVal);
-				if (firstLitVal > 0) {
+				ClauseList[clauseCounted].push_back(nextLitVal);
+				if (nextLitVal > 0) {
 					LiteralList[nextLitVal - 1].push_back(clauseCounted);
 				} else {
 					LiteralList[-nextLitVal - 1].push_back(-clauseCounted);
