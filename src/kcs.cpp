@@ -4,6 +4,7 @@ SAT_KCS::SAT_KCS(std::string path){
 	int numClauses, numLiterals;
 	std::ifstream fileDIMACS(path);
 
+	cout << "Start\n";
 	if(fileDIMACS.is_open()){
 		std::string line;
 		
