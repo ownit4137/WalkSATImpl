@@ -15,7 +15,7 @@ SAT_KCS::SAT_KCS(std::string path){
 		fileDIMACS >> numClauses;	// nc
 		// numClauses = stoi(line);
 
-		LiteralList.resize(numLIterals);
+		LiteralList.resize(numLiterals);
 		ClauseList.resize(numClauses);
 		ClauseCost.resize(numClauses);
 		std::fill(ClauseCost.begin(), ClauseCost.end(), 0);
@@ -292,6 +292,5 @@ SAT_KCS::SAT_KCS(std::string path){
 		*/
 	} else {
 		std::cerr << "Cannot open file: " << path << "\n";
-		initialized = false;
 	}
 }
