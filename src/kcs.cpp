@@ -25,11 +25,14 @@ SAT_KCS::SAT_KCS(std::string path){
 		int firstLitVal;
 		int nextLitVal;
 		int i = 0;
+		cout << "Initialization\n";
 		while(!fileDIMACS.eof()){
 			fileDIMACS >> firstLit;
+			cout << i <<"nst line\n";
 			
 			// comment
 			if (firstLit[0] == 'c'){
+				cout << "comment\n";
 				while (!fileDIMACS.eof()){
 					getline(fileDIMACS, line);
 				}
@@ -40,7 +43,7 @@ SAT_KCS::SAT_KCS(std::string path){
 			firstLitVal = firstLit[0] == '-' ? -firstLitVal : firstLitVal;
 			ClauseList[i].push_back(firstLitVal);
 			LiteralList[firstLitVal].push_back(i);
-
+			
 			while (true) {
 				fileDIMACS >> nextLitVal;
 				if (nextLitVal == 0){
