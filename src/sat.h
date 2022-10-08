@@ -55,6 +55,6 @@ class SAT_KCS{
 			}	
 		}
 		
-}
+};
 
 #endif

@@ -1,7 +1,5 @@
 #include "sat.h"
 
-class SATInstance;
-
 int main(int argc, char* argv[]){
 
 	std::string path = std::string(argv[1]);
