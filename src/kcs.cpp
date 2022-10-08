@@ -12,9 +12,7 @@ SAT_KCS::SAT_KCS(std::string path){
 		fileDIMACS >> line;	// p
 		fileDIMACS >> line;	// cnf
 		fileDIMACS >> numLiterals;	// nv
-		// numLiterals = stoi(line);
 		fileDIMACS >> numClauses;	// nc
-		// numClauses = stoi(line);
 
 		LiteralList.resize(numLiterals, std::vector<int>(0));
 		ClauseList.resize(numClauses, std::vector<int>(0));
@@ -26,27 +24,20 @@ SAT_KCS::SAT_KCS(std::string path){
 		int firstLitVal;
 		int nextLitVal;
 		int clauseCounted = 0;
-		std::cout << numLiterals << numClauses << " Initialization\n";
+		// std::cout << numLiterals << numClauses << " Initialization\n";
+		char p;
 		while (!fileDIMACS.eof()) {
-			fileDIMACS >> firstLitVal;
-			if (fileDIMACS.eof()) {
+			fileDIMACS.ignore(256, '\n');
+			p = fileDIMACS.peek();
+			if (p == EOF || fileDIMACS.eof()) {
 				break;
 			}
-			if (!fileDIMACS.good()) {
-				getline(fileDIMACS, line);
+			// std::cout << clauseCounted <<"st line "<< p <<"\n";
+			if (p == 'c') {
+				fileDIMACS.ignore(256, '\n');
 				continue;
 			}
-			std::cout << clauseCounted <<"st line " << firstLitVal << "\n";
-
-			ClauseList[clauseCounted].push_back(firstLitVal);
-			if (firstLitVal > 0) {
-				LiteralList[firstLitVal - 1].push_back(clauseCounted);
-			} else {
-				LiteralList[-firstLitVal - 1].push_back(-clauseCounted);
-			}
-			// vectorLiteralStore?
-
-
+			
 			while (true) {
 				fileDIMACS >> nextLitVal;
 				if (nextLitVal == 0){
@@ -59,44 +50,14 @@ SAT_KCS::SAT_KCS(std::string path){
 				} else {
 					LiteralList[-nextLitVal - 1].push_back(-clauseCounted);
 				}
+				// vectorliteralclause?
 			}
 			clauseCounted++;
 		}
-		/*
-		while(!fileDIMACS.eof()){
 		
-			fileDIMACS >> firstLit;
-			std::cout << i <<"nst line\n";
-			
-			// comment
-			if (firstLit[0] == 'c'){
-				std::cout << "comment\n";
-				while (!fileDIMACS.eof()){
-					getline(fileDIMACS, line);
-				}
-				break;
-			}
-
-			firstLitVal = firstLit[0] == '-' ? -(firstLit[1] - '0') : fistLit[0];
-			ClauseList[i].push_back(firstLitVal);
-			LiteralList[firstLitVal].push_back(i);
-			
-			while (true) {
-				fileDIMACS >> nextLitVal;
-				if (nextLitVal == 0){
-					break;
-				}
-				ClauseList[i].push_back(nextLitVal);
-				LiteralList[nextLitVal].push_back(i);
-
-			}
-			i++;
+		if (clauseCounted + 1 != numClauses) {
+			std::cout << "#clauses error\n";
 		}
-		*/
-
-
-
-
 
 		/*
 		getline(fileDIMACS, line);
