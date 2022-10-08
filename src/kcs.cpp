@@ -29,7 +29,6 @@ SAT_KCS::SAT_KCS(std::string path){
 		std::cout << numLiterals << numClauses << " Initialization\n";
 		while (!fileDIMACS.eof()) {
 			fileDIMACS >> firstLitVal;
-			std::cout << clauseCounted <<"st line " << firstLitVal << "\n";
 			if (fileDIMACS.eof()) {
 				break;
 			}
@@ -37,7 +36,8 @@ SAT_KCS::SAT_KCS(std::string path){
 				getline(fileDIMACS, line);
 				continue;
 			}
-
+			std::cout << clauseCounted <<"st line " << firstLitVal << "\n";
+			
 			ClauseList[clauseCounted].push_back(firstLitVal);
 			if (firstLitVal > 0) {
 				LiteralList[firstLitVal - 1].push_back(clauseCounted);
