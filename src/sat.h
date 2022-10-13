@@ -18,8 +18,8 @@
 #include <unistd.h>
 
 //kcs
-#define MAX_TRIES 100
-#define MAX_FLIPS 1000
+#define MAX_TRIES 10
+#define MAX_FLIPS 1000000
 #define MAX_CLAUSES 100000
 #define RAND_P 567
 #define D

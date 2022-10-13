@@ -3,7 +3,6 @@
 SAT_KCS::SAT_KCS(std::string path){
 	std::ifstream fileDIMACS(path);
 
-	std::cout << "Start\n";
 	if(fileDIMACS.is_open()){
 		std::string line;
 		
@@ -12,6 +11,8 @@ SAT_KCS::SAT_KCS(std::string path){
 		fileDIMACS >> line;	// cnf
 		fileDIMACS >> numVars;	// nv
 		fileDIMACS >> numClauses;	// nc
+
+		std::cout << "#Vars : " << numVars << " #Clauses : " << numClauses << "\n";
 
 		VarInClause.resize(numVars, std::vector<cls>(0));
 		ClauseInfo.resize(numClauses, std::vector<lit>(0));
@@ -73,7 +74,7 @@ void SAT_KCS::solve(){
 
 	// 1 TRY
 	for (size_t t = 0; t < MAX_TRIES; t++) {
-		std::cout << "TRY-"<< t + 1 << "\n";
+		//std::cout << "TRY-"<< t + 1 << "\n";
 		std::vector<bool> var_assignment;
 		UCB.clear();
 
@@ -108,9 +109,9 @@ void SAT_KCS::solve(){
 
 		// Start Flip
 		for (size_t f = 0; f < MAX_FLIPS; f++) {
-			if (f % (MAX_FLIPS/10) == 0) {
-				std::cout << "FLIP-"<< f << "\n";
-			}
+			// if (f % (MAX_FLIPS/10) == 0) {
+			// 	std::cout << "FLIP-"<< f << "\n";
+			// }
 			// Choose UC in UCB
 			// hash table ??
 			if (UCB.size() == 0){
