@@ -1,7 +1,6 @@
 #include "sat.h"
 
 SAT_KCS::SAT_KCS(std::string path){
-	int numClauses, numLiterals;
 	std::ifstream fileDIMACS(path);
 
 	std::cout << "Start\n";
@@ -11,20 +10,17 @@ SAT_KCS::SAT_KCS(std::string path){
 		// parsing the first line
 		fileDIMACS >> line;	// p
 		fileDIMACS >> line;	// cnf
-		fileDIMACS >> numLiterals;	// nv
+		fileDIMACS >> numVars;	// nv
 		fileDIMACS >> numClauses;	// nc
 
-		LiteralList.resize(numLiterals, std::vector<int>(0));
-		ClauseList.resize(numClauses, std::vector<int>(0));
-		ClauseCost.resize(numClauses);
-		std::fill(ClauseCost.begin(), ClauseCost.end(), 0);
+		VarInClause.resize(numVars, std::vector<cls>(0));
+		ClauseInfo.resize(numClauses, std::vector<lit>(0));
+		ClauseCost.resize(numClauses, 0);
+		answer.resize(numVars, 0);
 
+		int nextLit;
+		int clauseCounted = 1;
 
-		std::string firstLit;
-		int firstLitVal;
-		int nextLitVal;
-		int clauseCounted = 0;
-		// std::cout << numLiterals << numClauses << " Initialization\n";
 		char p;
 		while (!fileDIMACS.eof()) {
 			fileDIMACS.ignore(256, '\n');
@@ -32,266 +28,241 @@ SAT_KCS::SAT_KCS(std::string path){
 			if (p == EOF || fileDIMACS.eof()) {
 				break;
 			}
-			// std::cout << clauseCounted <<"st line "<< p <<"\n";
 			if (p == 'c') {
 				fileDIMACS.ignore(256, '\n');
 				continue;
 			}
 			
 			while (true) {
-				fileDIMACS >> nextLitVal;
-				if (nextLitVal == 0){
+				fileDIMACS >> nextLit;
+				if (nextLit == 0){
 					break;
 				}
 
-				ClauseList[clauseCounted].push_back(nextLitVal);
-				if (nextLitVal > 0) {
-					LiteralList[nextLitVal - 1].push_back(clauseCounted);
-				} else {
-					LiteralList[-nextLitVal - 1].push_back(-clauseCounted);
-				}
+				//ClauseInfo[clauseCounted].push_back(nextLit);
+				lit tl;
+				cls tc;
+				tl.varSign = nextLit < 0;
+				tl.varNumber = tl.varSign ? -nextLit : nextLit;	// +- 1 ~ nvar
+				tc.varSign = nextLit < 0;
+				tc.clsNumber = clauseCounted;					// +- 1 ~ ncls
+
+				ClauseInfo[clauseCounted - 1].push_back(tl);
+				VarInClause[tl.varNumber - 1].push_back(tc);
+
 				// vectorliteralclause?
 			}
 			clauseCounted++;
 		}
 		
-		if (clauseCounted + 1 != numClauses) {
+		if (clauseCounted - 1 != numClauses) {
 			std::cout << "#clauses error\n";
 		}
 
-		/*
-		getline(fileDIMACS, line);
-
-
-
-		//Parse
-		while(getline(fileDIMACS, line)){
-
-			size_t pos = 0;
-			std::string delimiter = " ";
-			std::string token;
-
-			std::vector<std::string> parseAnswer;
-
-			while((pos = line.find(delimiter)) != std::string::npos){
-				
-				token = line.substr(0, pos);
-				line.erase(0, pos + delimiter.length());
-
-				parseAnswer.push_back(token);
-			}
-			parseAnswer.push_back(line);
-
-			switch(parseState){
-				//Metadata from DIMACS
-				case 0:
-					numClauses = std::stoi(parseAnswer[parseAnswer.size()-1]);
-					numLiterals = std::stoi(parseAnswer[parseAnswer.size()-2]);
-
-					vectorClauseStore = new std::vector<cls>[numClauses];
-					vectorLiteralStore = new std::vector<lit>[numLiterals];
-
-					//ykchoi
-					{
-						std::vector<int> new_clause; 
-						for(size_t i = 0; i < numClauses; i++ ){
-							//new_clause = new std::vector<int>; 
-							ClauseList.push_back(new_clause);
-							ClauseCost.push_back(0);
-						}
-
-						std::vector<int> new_literal; 
-						for(size_t i = 0; i < numLiterals; i++ ){
-							//new_clause = new std::vector<int>; 
-							LiteralList.push_back(new_literal);
-						}
-
-					}
-
-					parseState++;
-					break;
-				//Store clauses and literals
-				case 1:
-					{
-						//Skip lines starting with 'C'
-						bool skipComment = false;
-						for(unsigned int i = 0; i < parseAnswer[0].size(); i++){
-							if(!isdigit(parseAnswer[0][i]) && parseAnswer[0][i] != '-'){
-								skipComment = true;
-								break;
-							}
-						}
-						if(skipComment){
-							break;
-						}
-
-						if(std::stoi(parseAnswer[parseAnswer.size()-1]) != 0){
-							fileDIMACS.close();
-							initialized = false;
-						}else{
-							parseAnswer.pop_back();
-
-							for(unsigned int i = 0; i < parseAnswer.size(); i++){
-								lit literalVal = std::stoi(parseAnswer[i]);
-								if(abs(literalVal) > numLiterals){
-									fileDIMACS.close();
-									std::cerr << "Literal value and max literal mismatch: " << literalVal << " " << numLiterals << "\n";
-									initialized = false;
-								}else{
-									//ykchoi
-									ClauseList[clauseCounted].push_back(literalVal);
-									if(literalVal > 0){
-										LiteralList[literalVal-1].push_back(clauseCounted+1);
-									}else{
-										LiteralList[-literalVal-1].push_back(-clauseCounted-1);
-									}
-
-									vectorClauseStore[clauseCounted].push_back(literalVal);
-									if(literalVal > 0){
-										vectorLiteralStore[abs(literalVal)-1].push_back(clauseCounted+1);
-									}else{
-										vectorLiteralStore[abs(literalVal)-1].push_back(-clauseCounted-1);
-									}
-								}
-							}
-				
-							clauseCounted++;
-						
-						}
-					}
-					break;
-				default:
-					fileDIMACS.close();
-					std::cerr << "Wrong state: " << parseState << "\n";
-					initialized = false;
-			}
-
-		}	
-
-		fileDIMACS.close();
-		if(clauseCounted != numClauses){
-			std::cerr << "Clause counter and counted mismatch: " << clauseCounted << " " << numClauses << "\n";
-			initialized = false;
-		}
-
-		//Sort literal and clauses vector
-		auto compare = [](int a, int b){
-			int abs_a = abs(a), abs_b = abs(b);
-			if (abs_a < abs_b) return true;
-			if (abs_b < abs_a) return false;
-			return a < b;
-		};
-
-		totalClausesSize = 0;
-		for(unsigned int i = 0; i < numClauses; i++){
-			std::sort(vectorClauseStore[i].begin(), vectorClauseStore[i].end(), compare);
-			totalClausesSize += vectorClauseStore[i].size();
-		}
-
-		totalLiteralsSize = 0;
-		for(unsigned int i = 0; i < numLiterals; i++){
-			std::sort(vectorLiteralStore[i].begin(), vectorLiteralStore[i].end(), compare);
-			totalLiteralsSize += vectorLiteralStore[i].size();
-		}
-
-		//Each Clause and literal in their respective store needs to be aligned to a pow2
-		bool addOne = abs(ceil(log2((double)numClauses)) - floor(log2((double)numClauses))) < 0.0001 ? true : false;
-		uint64_t numClausePow2 = (uint64_t)pow(2,ceil(log2(numClauses))+addOne);
-
-		sumOfClauses = MemoryWatchArray<int64_t>(numClausePow2);
-		clauseSolveState = MemoryWatchArray<unsigned int>(numClausePow2);
-		clauseCounter = MemoryWatchArray<int>(numClausePow2);
-		clauseStoreOffsets = MemoryWatchArray<offsetMetaData>(numClausePow2);
-		unsolvedClauses = numClauses;
-	
-		std::vector<cls> vectorClauseStore1D;
-		unsigned int tmpPosition = 0;
-		uint64_t longestClauseLength = 0;
-
-
-		unsatClauseCount = std::vector<unsigned int>(numClauses);
-		for(unsigned int i = 0; i < numClauses; i++){
-			sumOfClauses[i] = 0;
-			clauseCounter[i] = vectorClauseStore[i].size();
-			clauseStoreOffsets[i] = (offsetMetaData){.position=tmpPosition,.size=vectorClauseStore[i].size()};
-			clauseSolveState[i] = 0;
-
-			if(vectorClauseStore[i].size() > longestClauseLength){
-				longestClauseLength = vectorClauseStore[i].size();
-			}
-
-			for(unsigned int j = 0; j < vectorClauseStore[i].size(); j++){
-				vectorClauseStore1D.push_back(vectorClauseStore[i][j]);
-				sumOfClauses[i] += vectorClauseStore[i][j];
-				tmpPosition++;
-			}
-			unsatClauseCount[i] = 0;
-		}
-
-		for(unsigned int i = 0; i < 4096; i++){
-			vectorClauseStore1D.push_back(0);
-		}
-
-		clauseStore = MemoryWatchArray<cls>(vectorClauseStore1D.size());
-		for(unsigned int i = 0; i < vectorClauseStore1D.size(); i++){
-			clauseStore[i] = vectorClauseStore1D[i];
-		}
-
-		CAMDObject.numClausesAllocated = numClausePow2;
-		CAMDObject.startingExtraElements = 4096;
-		CAMDObject.clauseStoreElementsFree = 4096;
-		CAMDObject.clauseStoreElementsUsed = vectorClauseStore1D.size()-4096;
-		CAMDObject.longestClauseLength = longestClauseLength;
-
-		inferOverflow = MemoryWatchArray<lit>(numLiterals);
-		isInInferOverflow = MemoryWatchArray<bool>(numLiterals);
-		literalStack = MemoryWatchArray<literalAssignment>(numLiterals);
-		isInLiteralStack = MemoryWatchArray<bool>(numLiterals);
-		literalStoreOffsets = MemoryWatchArray<offsetMetaData>(numLiterals+1);
-		inferOverflowRemainder = 0;
-		literalStackHeight = 0;
-
-		std::vector<lit> vectorLiteralStore1D;
-		tmpPosition = 0;
-
-		for(unsigned int i = 0; i < numLiterals; i++){
-			literalStoreOffsets[i] = (offsetMetaData){.position=tmpPosition,.size=vectorLiteralStore[i].size()};
-			inferOverflow[i] = 0;
-			isInLiteralStack[i] = false;
-			isInInferOverflow[i] = false;
-		
-			for(unsigned int j = 0; j < vectorLiteralStore[i].size(); j++){
-				vectorLiteralStore1D.push_back(vectorLiteralStore[i][j]);
-				tmpPosition++;		
-			}
-
-			uint64_t roundNextPow2 = pow(2,4);
-			if(roundNextPow2 < vectorLiteralStore[i].size()){
-				uint64_t getPower = (uint64_t)ceil(log2(vectorLiteralStore[i].size()));
-				if(vectorLiteralStore[i].size() % (uint64_t)pow(2,getPower) == 0){
-					getPower++;
-				}
-				roundNextPow2 = (uint64_t)pow(2,getPower);
-			}
-
-			roundNextPow2 -= vectorLiteralStore[i].size();
-			for(unsigned int j = 0; j < roundNextPow2; j++){
-				vectorLiteralStore1D.push_back(0);
-				tmpPosition++;
-			}
-		}
-		literalStoreOffsets[numLiterals]= (offsetMetaData){.position=tmpPosition,.size=0};
-
-		literalStore = MemoryWatchArray<lit>(vectorLiteralStore1D.size());
-		for(unsigned int i = 0; i < vectorLiteralStore1D.size(); i++){
-			literalStore[i] = vectorLiteralStore1D[i];
-		}
-		
-		delete[] vectorClauseStore;
-		delete[] vectorLiteralStore;
-		initialized = true;
-		*/
 	} else {
 		std::cerr << "Cannot open file: " << path << "\n";
 	}
+}
+
+
+void SAT_KCS::solve(){
+	srand(time(0));
+	std::chrono::steady_clock::time_point timeStart = std::chrono::steady_clock::now();
+	std::set<int> UCB;	// Unsatisfied Clause Buffer
+	// [0, ncls-1]
+
+	// 1 TRY
+	for (size_t t = 0; t < MAX_TRIES; t++) {
+		std::cout << "TRY-"<< t + 1 << "\n";
+		std::vector<bool> var_assignment;
+		UCB.clear();
+
+		// Initialize
+		for (size_t i = 0; i < numVars; i++) {
+			int b = rand()%2;
+			var_assignment.push_back(b);	// 0 false 1 true
+
+#ifdef DEBUG
+			std::cout << var_assignment[i] << " ";
+			if (i == numVars - 1) std::cout << "\n";
+#endif
+		}
+
+		// Update Clause Cost 
+		for (size_t c = 0; c < ClauseInfo.size(); c++) {
+			ClauseCost[c] = 0;
+			for (size_t l = 0; l < ClauseInfo[c].size(); l++) {
+				// (0 pos ^ 1 true || 1 neg ^ 0 false) -> true
+				if (ClauseInfo[c][l].varSign ^ var_assignment[ClauseInfo[c][l].varNumber - 1]) {	//neg
+					ClauseCost[c]++;
+				}
+			}
+			if (ClauseCost[c] == 0) {
+				UCB.insert(c);
+			}
+
+#ifdef DEBUG
+			// std::cout << "Cost of clause " << c + 1 << " is " << ClauseCost[c] << std::endl;
+#endif
+		}
+
+		// Start Flip
+		for (size_t f = 0; f < MAX_FLIPS; f++) {
+			if (f % (MAX_FLIPS/10) == 0) {
+				std::cout << "FLIP-"<< f << "\n";
+			}
+			// Choose UC in UCB
+			// hash table ??
+			if (UCB.size() == 0){
+				issolved = true;
+				for (int i = 0; i < numVars; i++) {
+					answer[i] = var_assignment[i];
+				}
+				break;
+			}
+			int cnt = 0;
+			int random_clause_idx = 0;
+			int random_clause_sel = rand() % UCB.size();
+			std::set<int>::iterator it;
+			for( cnt = 0, it = UCB.begin(); it != UCB.end(); it++, cnt++ ){
+				if( cnt == random_clause_sel ){
+					random_clause_idx = *it;
+				}
+			}
+
+#ifdef DEBUG
+			std::cout << "Choose lit in Clause " << random_clause_idx + 1 <<  std::endl;
+#endif
+
+			// Calculate break(x)
+			int flip_var = 0;
+			int break_min = 1e9;
+			std::vector<int> var_candidates;
+			for (size_t l = 0; l < ClauseInfo[random_clause_idx].size(); l++) {
+				int break_cnt = 0;
+				int var_num = ClauseInfo[random_clause_idx][l].varNumber;
+
+				for (size_t c = 0; c < VarInClause[var_num - 1].size(); c++) {
+					bool islittrue = VarInClause[var_num - 1][c].varSign ^ var_assignment[var_num - 1];	 // 0pos true , 1neg false
+					if (islittrue && ClauseCost[VarInClause[var_num - 1][c].clsNumber - 1] == 1) {
+						break_cnt++;
+					}
+#ifdef DEBUG
+					int clsnum = VarInClause[var_num - 1][c].varSign ? -VarInClause[var_num - 1][c].clsNumber : VarInClause[var_num - 1][c].clsNumber;
+					std::cout << "Var " << var_num << " in Clause " << clsnum << " var assg " << var_assignment[var_num - 1]  << " cost " << ClauseCost[VarInClause[var_num - 1][c].clsNumber - 1]  << " break cnt " << break_cnt << std::endl;
+#endif
+				}
+
+				if (break_cnt == 0) {
+#ifdef DEBUG
+					std::cout << "var " << var_num << " no break pushed\n";
+#endif
+					break_min = 0;
+					var_candidates.push_back(var_num);
+				}
+				else if (break_min > break_cnt) {
+					flip_var = var_num;
+					break_min = break_cnt;
+				}
+			}
+
+			// choose among break 0s
+			if (var_candidates.size() != 0) {
+				flip_var = var_candidates[rand() % var_candidates.size()];
+				// ++lmake
+			}
+			else {
+				if (rand() % 1000 > RAND_P) {
+					flip_var = ClauseInfo[random_clause_idx][rand() % ClauseInfo[random_clause_idx].size()].varNumber;
+#ifdef DEBUG_F
+					std::cout << "random!: ";
+#endif
+				}
+			}
+#ifdef DEBUG_F
+			std::cout << "flip var " << flip_var << " is chosen with break val " << break_min << std::endl;
+#endif
+
+
+
+			// flip
+			for (int c = 0; c < VarInClause[flip_var - 1].size(); c++) {
+				bool islittrue = VarInClause[flip_var - 1][c].varSign ^ var_assignment[flip_var - 1];	 // 0pos true , 1neg false
+				int clsnum = VarInClause[flip_var - 1][c].clsNumber - 1;	// [0, ncls-1]
+				if (islittrue) {	// true lit
+					ClauseCost[clsnum]--;
+
+					if (ClauseCost[clsnum] == 0) {
+#ifdef DEBUG
+						std::cout << clsnum + 1 << " Clause inserted  ";
+#endif
+						UCB.insert(clsnum);
+					}
+#ifdef DEBUG
+					int cln = VarInClause[flip_var - 1][c].varSign ? -clsnum-1 : clsnum+1;
+					std::cout << "after flip var " << flip_var << " in Clause " << cln << " var assg " << !var_assignment[flip_var - 1]  << " cost decreased " << ClauseCost[clsnum] << "\n";
+#endif
+				}
+				else {	// false lit
+					if (ClauseCost[clsnum] == 0) {
+						std::set<int>::iterator it = UCB.find(clsnum);
+						if( it == UCB.end() ){
+							std::cout << "Error. Cannot find clause " << clsnum << std::endl;
+							exit(0);					
+						}
+						else {
+#ifdef DEBUG
+						std::cout << (*it) + 1 << " Clause erased  ";
+#endif
+							UCB.erase( it );
+
+						}
+					}
+					ClauseCost[clsnum]++;
+#ifdef DEBUG
+					int cln = VarInClause[flip_var - 1][c].varSign ? -clsnum-1 : clsnum+1;
+					std::cout << "after flip var " << flip_var << " in Clause " << cln << " var assg " << !var_assignment[flip_var - 1]  << " cost increased " << ClauseCost[clsnum] << "\n";
+#endif
+				}
+			}
+			var_assignment[flip_var - 1] = var_assignment[flip_var - 1] ^ true;
+		} // end all flips
+		if (issolved) break;
+	} // end all tries
+
+
+	if( UCB.size() != 0 ){
+		std::cout << "\n\nWalkSAT could not find a solution." << std::endl;
+	}
+
+	std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();
+	elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeStart).count();
+}
+
+void SAT_KCS::result() {
+	if (issolved) {
+		bool totresult = true;
+		for (int c = 0; c < numClauses; c++) {
+			bool cls = false;
+			for (int l = 0; l < ClauseInfo[c].size(); l++) {
+				// true 1 pos 0, false 0 neg 1 -> true
+				bool lit = answer[ClauseInfo[c][l].varNumber - 1] ^  ClauseInfo[c][l].varSign;
+				cls |= lit;
+			}
+			totresult &= cls;
+		}
+		if (totresult) {
+			std::cout << "WalkSAT found a solution. Verified.\n";
+			// for (int i = 1; i <= numVars; i++) {
+			// 	std::cout << answer[i - 1] << " ";
+			// 	if (i % 100 == 0) {
+			// 		std::cout << "\n";
+			// 	}
+			// }
+		}
+	}
+	else {
+		std::cout << "WalkSAT could not find a solution.\n";
+	}
+	std::cout << "WalkSAT completed in: " << elapsedTime/1000000 << " seconds " << std::endl;
 }

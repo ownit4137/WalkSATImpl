@@ -467,8 +467,8 @@ void SATInstance::WalkSat(){
 	long long unsat_pop = 0;
 //#endif
 
-	srand(0);
-
+	
+	srand(time(0));
 	std::chrono::steady_clock::time_point timeStart = std::chrono::steady_clock::now();
 
 	std::set<int> unsat_list;

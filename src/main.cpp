@@ -5,10 +5,11 @@ int main(int argc, char* argv[]){
 	std::string path = std::string(argv[1]);
 	std::cout << path << "\n";
 	SAT_KCS inst(path);
-	std::cout << "inst finished\n";
 	// inst.solve(std::stoi(std::string(argv[2])));
 	// inst.WalkSat(); //ykchoi
-	inst.PrintClauseList();
-	inst.PrintLiteralList();
+	// inst.PrintVarInClause();
+	// inst.PrintClauseInfo();
+	inst.solve();
+	inst.result();
 	return 0;
 }

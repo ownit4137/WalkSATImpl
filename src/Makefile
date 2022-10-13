@@ -13,5 +13,6 @@ clean:
 	rm -f *.o *.out
 
 run:
+#	./test.out ../test/sudoku_9_3_3.dimacs 0
 	./test.out ../test/n_queens32.dimacs 0
 
