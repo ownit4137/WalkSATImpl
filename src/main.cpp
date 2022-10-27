@@ -9,7 +9,7 @@ int main(int argc, char* argv[]){
 	// inst.WalkSat(); //ykchoi
 	// inst.PrintVarInClause();
 	// inst.PrintClauseInfo();
-	inst.solve();
+	// inst.solve();
 	inst.result();
 	return 0;
 }

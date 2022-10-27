@@ -1,7 +1,7 @@
 CFLAGS = -g -Wall -std=c++11
 MAKEFLAGS += --silent
-# filepath = ../test/* # local
-filepath = ../../NoLimits/* # colab
+filepath = ../test/* # local
+# filepath = ../../NoLimits/* # colab
 
 test.out: main.o kcs.o
 	g++ $(CFLAGS) -o test.out main.o kcs.o
