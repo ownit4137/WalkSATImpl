@@ -16,7 +16,7 @@ clean:
 
 run:
 #	./test.out ../test/sudoku_9_3_3.dimacs 0
-#	./test.out ../test/n_queens32.dimacs 0
+#	./test.out ../test/g2-ak128astepbg1btisc.cnf 0
 	for f in $(filepath); do \
 		./test.out $$f; \
 	done

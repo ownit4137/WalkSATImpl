@@ -5,6 +5,10 @@ SAT_KCS::SAT_KCS(std::string path){
 
 	if(fileDIMACS.is_open()){
 		std::string line;
+		char pp;
+		while ((pp = fileDIMACS.peek()) == 'c') {
+			fileDIMACS.ignore(256, '\n');
+		}
 		
 		// parsing the first line
 		fileDIMACS >> line;	// p
@@ -12,7 +16,7 @@ SAT_KCS::SAT_KCS(std::string path){
 		fileDIMACS >> numVars;	// nv
 		fileDIMACS >> numClauses;	// nc
 
-		std::cout << "#Vars : " << numVars << " #Clauses : " << numClauses << "\n";
+		std::cout << "," << numVars << "," << numClauses << ",";
 
 		VarInClause.resize(numVars, std::vector<cls>(0));
 		ClauseInfo.resize(numClauses, std::vector<lit>(0));
@@ -63,6 +67,15 @@ SAT_KCS::SAT_KCS(std::string path){
 	} else {
 		std::cerr << "Cannot open file: " << path << "\n";
 	}
+	int max = 0;
+	double s = 0.0;
+	for (int i = 0; i < numClauses; i++) {
+		if (max < ClauseInfo[i].size()) {
+			max = ClauseInfo[i].size();
+		}
+		s += ClauseInfo[i].size();
+	}
+	std::cout << s / numClauses << "," << max << "\n";
 }
 
 
@@ -74,7 +87,7 @@ void SAT_KCS::solve(){
 
 	// 1 TRY
 	for (size_t t = 0; t < MAX_TRIES; t++) {
-		//std::cout << "TRY-"<< t + 1 << "\n";
+		// std::cout << "TRY-"<< t + 1 << "\n";
 		std::vector<bool> var_assignment;
 		UCB.clear();
 
@@ -83,10 +96,10 @@ void SAT_KCS::solve(){
 			int b = rand()%2;
 			var_assignment.push_back(b);	// 0 false 1 true
 
-#ifdef DEBUG
-			std::cout << var_assignment[i] << " ";
-			if (i == numVars - 1) std::cout << "\n";
-#endif
+// #ifdef DEBUG
+// 			std::cout << var_assignment[i] << " ";
+// 			if (i == numVars - 1) std::cout << "\n";
+// #endif
 		}
 
 		// Update Clause Cost 
@@ -94,7 +107,7 @@ void SAT_KCS::solve(){
 			ClauseCost[c] = 0;
 			for (size_t l = 0; l < ClauseInfo[c].size(); l++) {
 				// (0 pos ^ 1 true || 1 neg ^ 0 false) -> true
-				if (ClauseInfo[c][l].varSign ^ var_assignment[ClauseInfo[c][l].varNumber - 1]) {	//neg
+				if (ClauseInfo[c][l].varSign ^ var_assignment[ClauseInfo[c][l].varNumber - 1]) {
 					ClauseCost[c]++;
 				}
 			}
@@ -109,9 +122,9 @@ void SAT_KCS::solve(){
 
 		// Start Flip
 		for (size_t f = 0; f < MAX_FLIPS; f++) {
-			// if (f % (MAX_FLIPS/10) == 0) {
-			// 	std::cout << "FLIP-"<< f << "\n";
-			// }
+			if (f % (MAX_FLIPS/10) == 0) {
+				// std::cout << "FLIP-"<< f << "\n";
+			}
 			// Choose UC in UCB
 			// hash table ??
 			if (UCB.size() == 0){
@@ -143,8 +156,10 @@ void SAT_KCS::solve(){
 				int break_cnt = 0;
 				int var_num = ClauseInfo[random_clause_idx][l].varNumber;
 
-				for (size_t c = 0; c < VarInClause[var_num - 1].size(); c++) {
+				for (size_t c = 0; c < VarInClause[var_num - 1].size(); c++) {\
+
 					bool islittrue = VarInClause[var_num - 1][c].varSign ^ var_assignment[var_num - 1];	 // 0pos true , 1neg false
+					// !islittrue
 					if (islittrue && ClauseCost[VarInClause[var_num - 1][c].clsNumber - 1] == 1) {
 						break_cnt++;
 					}
@@ -155,9 +170,6 @@ void SAT_KCS::solve(){
 				}
 
 				if (break_cnt == 0) {
-#ifdef DEBUG
-					std::cout << "var " << var_num << " no break pushed\n";
-#endif
 					break_min = 0;
 					var_candidates.push_back(var_num);
 				}
@@ -231,16 +243,17 @@ void SAT_KCS::solve(){
 		if (issolved) break;
 	} // end all tries
 
-
-	if( UCB.size() != 0 ){
+#ifdef DEBEG_R
+	if ( UCB.size() != 0 ){
 		std::cout << "\n\nWalkSAT could not find a solution." << std::endl;
 	}
-
+#endif
 	std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();
 	elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeStart).count();
 }
 
 void SAT_KCS::result() {
+#ifdef DEBUG_R
 	if (issolved) {
 		bool totresult = true;
 		for (int c = 0; c < numClauses; c++) {
@@ -266,4 +279,5 @@ void SAT_KCS::result() {
 		std::cout << "WalkSAT could not find a solution.\n";
 	}
 	std::cout << "WalkSAT completed in: " << elapsedTime/1000000 << " seconds " << std::endl;
+#endif
 }

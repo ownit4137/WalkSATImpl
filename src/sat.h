@@ -18,18 +18,16 @@
 #include <unistd.h>
 
 //kcs
-#define MAX_TRIES 10
-#define MAX_FLIPS 1000000
-#define MAX_CLAUSES 100000
+#define MAX_TRIES 1
+#define MAX_FLIPS 10
 #define RAND_P 567
-#define D
+#define DEBU
 
 
 
 struct lit {
 	// struct alignment? 
 	// 1bit : 31bit
-	// bit division
 	bool varSign;	// 0 for pos 1 for neg
 	int varNumber;
 };
@@ -37,7 +35,6 @@ struct lit {
 struct cls {
 	// struct alignment? 
 	// 1bit : 31bit
-	// bit division
 	bool varSign;	// 0 for pos 1 for neg
 	int clsNumber;
 };
