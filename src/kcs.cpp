@@ -69,13 +69,19 @@ SAT_KCS::SAT_KCS(std::string path){
 	}
 	int max = 0;
 	double s = 0.0;
+	std::vector<int> count(300);
 	for (int i = 0; i < numClauses; i++) {
 		if (max < ClauseInfo[i].size()) {
 			max = ClauseInfo[i].size();
 		}
+		count[ClauseInfo[i].size()]++;
 		s += ClauseInfo[i].size();
 	}
 	std::cout << s / numClauses << "," << max << "\n";
+	for (int i = 2; i <= max; i++) {
+		std::cout << count[i] << ",";
+	}
+	std::cout << "\n";
 }
 
 
