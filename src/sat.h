@@ -19,7 +19,7 @@
 
 //kcs
 #define MAX_TRIES 1
-#define MAX_FLIPS 10
+#define MAX_FLIPS 1
 #define RAND_P 567
 #define DEBU
 

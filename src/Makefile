@@ -1,4 +1,5 @@
 CFLAGS = -g -Wall -std=c++11
+MAKEFLAGS += --silent
 # filepath = ../test/* # local
 filepath = ../../NoLimits/* # colab
 
