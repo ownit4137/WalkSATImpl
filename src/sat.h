@@ -18,12 +18,16 @@
 #include <unistd.h>
 
 //kcs
-#define MAX_TRIES 1
-#define MAX_FLIPS 1
-#define RAND_P 567
-#define DEBU
-
-
+#define MAX_TRIES 10
+#define MAX_FLIPS 100000000
+#define UCBSIZE 10000
+#define PRINT_FLIP_TIMES 10
+#define RAND_FLIP 300
+#define W1 1
+#define W2 0
+#define DEBUG_C1
+#define DEBUG_I
+#define DEBUG_R
 
 struct lit {
 	// struct alignment? 

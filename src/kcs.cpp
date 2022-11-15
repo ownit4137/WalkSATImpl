@@ -1,5 +1,26 @@
 #include "sat.h"
 
+int colision = 0;
+
+void ucbinsert(int* ucb, int clnum) {
+	for (int i = clnum % UCBSIZE; i < UCBSIZE; i++) {
+		if (ucb[i] == 0) {
+			ucb[i] = clnum;
+		}
+		else {
+			colision++;
+		}
+	}
+}
+
+void ucberase(int* ucb, int clnum) {
+	for (int i = clnum % UCBSIZE; i < UCBSIZE; i++) {
+		if (ucb[i] = clnum) {
+			ucb[i] = 0;
+		}
+	}
+}
+
 SAT_KCS::SAT_KCS(std::string path){
 	std::ifstream fileDIMACS(path);
 
@@ -16,7 +37,7 @@ SAT_KCS::SAT_KCS(std::string path){
 		fileDIMACS >> numVars;	// nv
 		fileDIMACS >> numClauses;	// nc
 
-		std::cout << "," << numVars << "," << numClauses << ",";
+		//std::cout << numVars << "," << numClauses << ",";
 
 		VarInClause.resize(numVars, std::vector<cls>(0));
 		ClauseInfo.resize(numClauses, std::vector<lit>(0));
@@ -77,11 +98,11 @@ SAT_KCS::SAT_KCS(std::string path){
 		count[ClauseInfo[i].size()]++;
 		s += ClauseInfo[i].size();
 	}
-	std::cout << s / numClauses << "," << max << "\n";
-	for (int i = 2; i <= max; i++) {
-		std::cout << count[i] << ",";
-	}
-	std::cout << "\n";
+	// std::cout << s / numClauses << "," << max << "\n";
+	// for (int i = 2; i <= max; i++) {
+	// 	std::cout << count[i] << ",";
+	// }
+	// std::cout << "\n";
 }
 
 
@@ -93,9 +114,13 @@ void SAT_KCS::solve(){
 
 	// 1 TRY
 	for (size_t t = 0; t < MAX_TRIES; t++) {
-		// std::cout << "TRY-"<< t + 1 << "\n";
+
+#ifdef DEBUG_I
+		std::cout << "TRY-"<< t + 1 << "\n";
+#endif
 		std::vector<bool> var_assignment;
 		UCB.clear();
+		int UCBList[UCBSIZE] = {0, };
 
 		// Initialize
 		for (size_t i = 0; i < numVars; i++) {
@@ -119,6 +144,7 @@ void SAT_KCS::solve(){
 			}
 			if (ClauseCost[c] == 0) {
 				UCB.insert(c);
+				// ucbinsert(UCBList, c);
 			}
 
 #ifdef DEBUG
@@ -128,28 +154,48 @@ void SAT_KCS::solve(){
 
 		// Start Flip
 		for (size_t f = 0; f < MAX_FLIPS; f++) {
-			if (f % (MAX_FLIPS/10) == 0) {
-				// std::cout << "FLIP-"<< f << "\n";
-			}
-			// Choose UC in UCB
 			// hash table ??
 			if (UCB.size() == 0){
 				issolved = true;
+				// std::cout << f << ", ";
 				for (int i = 0; i < numVars; i++) {
 					answer[i] = var_assignment[i];
 				}
 				break;
 			}
+			// 코드분석
+			// 결과
+			bool doprint = false;
+			if (f % (MAX_FLIPS/PRINT_FLIP_TIMES) == 0) {
+				//doprint = true;
+#ifdef DEBUG_I
+				std::cout << "FLIP-"<< f << " UCB size: " << UCB.size() <<  "\n";
+				if (UCB.size() < 10) {
+					std::set<int>::iterator it;
+					int numm = 0;
+					for(it = UCB.begin(); it != UCB.end(); it++, numm++){
+						std::cout << *it << ": " << ClauseInfo[*it].size() << " | ";
+					}
+					std::cout << "\n";
+				}
+#endif
+			}
+			
 			int cnt = 0;
 			int random_clause_idx = 0;
 			int random_clause_sel = rand() % UCB.size();
 			std::set<int>::iterator it;
+
+			
+			
 			for( cnt = 0, it = UCB.begin(); it != UCB.end(); it++, cnt++ ){
 				if( cnt == random_clause_sel ){
 					random_clause_idx = *it;
 				}
 			}
+			
 
+			
 #ifdef DEBUG
 			std::cout << "Choose lit in Clause " << random_clause_idx + 1 <<  std::endl;
 #endif
@@ -157,50 +203,72 @@ void SAT_KCS::solve(){
 			// Calculate break(x)
 			int flip_var = 0;
 			int break_min = 1e9;
+			int make_max = 0;
 			std::vector<int> var_candidates;
 			for (size_t l = 0; l < ClauseInfo[random_clause_idx].size(); l++) {
 				int break_cnt = 0;
+				int lmake = 0;
 				int var_num = ClauseInfo[random_clause_idx][l].varNumber;
 
-				for (size_t c = 0; c < VarInClause[var_num - 1].size(); c++) {\
+				for (size_t c = 0; c < VarInClause[var_num - 1].size(); c++) {
 
 					bool islittrue = VarInClause[var_num - 1][c].varSign ^ var_assignment[var_num - 1];	 // 0pos true , 1neg false
+					int ccost = ClauseCost[VarInClause[var_num - 1][c].clsNumber - 1];
 					// !islittrue
-					if (islittrue && ClauseCost[VarInClause[var_num - 1][c].clsNumber - 1] == 1) {
+					if (islittrue && ccost == 1) {
 						break_cnt++;
+					}
+					if (!islittrue) {
+						if (ccost == 0) {
+							lmake += W1;
+						} else if (ccost == 1) {
+							lmake += W2;
+						}
+						// lmake += ccost
 					}
 #ifdef DEBUG
 					int clsnum = VarInClause[var_num - 1][c].varSign ? -VarInClause[var_num - 1][c].clsNumber : VarInClause[var_num - 1][c].clsNumber;
-					std::cout << "Var " << var_num << " in Clause " << clsnum << " var assg " << var_assignment[var_num - 1]  << " cost " << ClauseCost[VarInClause[var_num - 1][c].clsNumber - 1]  << " break cnt " << break_cnt << std::endl;
+					//std::cout << "Var " << var_num << " in Clause " << clsnum << " var assg " << var_assignment[var_num - 1]  << " cost " << ClauseCost[VarInClause[var_num - 1][c].clsNumber - 1]  << " break cnt " << break_cnt << std::endl;
 #endif
 				}
 
-				if (break_cnt == 0) {
-					break_min = 0;
-					var_candidates.push_back(var_num);
+				if (doprint) {
+					std::cout << "Var " << var_num << " in Clause " << random_clause_idx << " break cnt " << break_cnt << " make " << lmake << "\n";
 				}
-				else if (break_min > break_cnt) {
-					flip_var = var_num;
+
+				// if (break_cnt == 0) {
+				// 	break_min = 0;
+				// 	var_candidates.push_back(var_num);
+				// }
+				// else if (break_min > break_cnt) {
+				// 	flip_var = var_num;
+				// 	break_min = break_cnt;
+				// }
+				if (break_min >= break_cnt) {
 					break_min = break_cnt;
+					if (make_max <= lmake) {
+						make_max = lmake;
+						flip_var = var_num;
+					}
 				}
 			}
 
 			// choose among break 0s
 			if (var_candidates.size() != 0) {
+				// std::cout << "error\n";
 				flip_var = var_candidates[rand() % var_candidates.size()];
 				// ++lmake
 			}
 			else {
-				if (rand() % 1000 > RAND_P) {
+				// int ppp = RAND_FLIP - 2 * (f / MAX_FLIPS);
+				if (rand() % 1000 < RAND_FLIP) {
 					flip_var = ClauseInfo[random_clause_idx][rand() % ClauseInfo[random_clause_idx].size()].varNumber;
-#ifdef DEBUG_F
-					std::cout << "random!: ";
-#endif
+					// std::cout << "random!: ";
 				}
 			}
-#ifdef DEBUG_F
-			std::cout << "flip var " << flip_var << " is chosen with break val " << break_min << std::endl;
-#endif
+			if (doprint) {
+				std::cout << "flip var " << flip_var << " is chosen with break val " << break_min << std::endl;
+			}
 
 
 
@@ -211,10 +279,7 @@ void SAT_KCS::solve(){
 				if (islittrue) {	// true lit
 					ClauseCost[clsnum]--;
 
-					if (ClauseCost[clsnum] == 0) {
-#ifdef DEBUG
-						std::cout << clsnum + 1 << " Clause inserted  ";
-#endif
+					if (ClauseCost[clsnum] == 0) {	
 						UCB.insert(clsnum);
 					}
 #ifdef DEBUG
@@ -230,11 +295,7 @@ void SAT_KCS::solve(){
 							exit(0);					
 						}
 						else {
-#ifdef DEBUG
-						std::cout << (*it) + 1 << " Clause erased  ";
-#endif
 							UCB.erase( it );
-
 						}
 					}
 					ClauseCost[clsnum]++;
@@ -245,6 +306,12 @@ void SAT_KCS::solve(){
 				}
 			}
 			var_assignment[flip_var - 1] = var_assignment[flip_var - 1] ^ true;
+
+
+			
+
+
+
 		} // end all flips
 		if (issolved) break;
 	} // end all tries
@@ -257,6 +324,11 @@ void SAT_KCS::solve(){
 	std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();
 	elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeStart).count();
 }
+
+
+// void SAT_KCS::DPLL() {
+
+// }
 
 void SAT_KCS::result() {
 #ifdef DEBUG_R

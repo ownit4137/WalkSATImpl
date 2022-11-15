@@ -1,4 +1,4 @@
-#include "sat.h"
+#include "sat_origin.h"
 
 SATInstance::SATInstance(std::string path){
 	std::vector<cls>* vectorClauseStore;
