@@ -18,8 +18,8 @@
 #include <unistd.h>
 
 //kcs
-#define MAX_TRIES 10
-#define MAX_FLIPS 100000000
+#define MAX_TRIES 10000
+#define MAX_FLIPS 10000000
 #define UCBSIZE 10000
 #define PRINT_FLIP_TIMES 10
 #define RAND_FLIP 300

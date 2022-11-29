@@ -37,7 +37,7 @@ SAT_KCS::SAT_KCS(std::string path){
 		fileDIMACS >> numVars;	// nv
 		fileDIMACS >> numClauses;	// nc
 
-		std::cout << numVars << "," << numClauses << ",";
+		// std::cout << numVars << "," << numClauses << ",";
 
 		VarInClause.resize(numVars, std::vector<cls>(0));
 		ClauseInfo.resize(numClauses, std::vector<lit>(0));
@@ -178,7 +178,10 @@ void SAT_KCS::solve(){
 					}
 					std::cout << "\n";
 				}
-#endif
+#endif			
+				if (f > 1000000 && UCB.size() > 20) {
+					break;
+				}
 			}
 			
 			int cnt = 0;
