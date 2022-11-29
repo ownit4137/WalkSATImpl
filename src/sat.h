@@ -28,6 +28,11 @@
 #define DEBUG_C1
 #define DEBUG_I
 #define DEBUG_R
+#define K 5
+#define R 100
+#define MAXNCLS
+#define MAXNVAR
+
 
 struct lit {
 	// struct alignment? 
@@ -50,15 +55,13 @@ class SAT_KCS{
 		
 
 		std::vector<std::vector<lit>> ClauseInfo;
-		// [0, ncls-1]에 lit +-[1, nvar]
+		// index: [0, ncls-1] element: lit +-[1, nvar]
 		std::vector<std::vector<cls>> VarInClause;		// The number of clauses where each literal is in
-		// [0, nvar-1]에 cls +-[1, ncls]
+		// index: [0, nvar-1] element: cls +-[1, ncls]
 		std::vector<int> ClauseCost;					// The number of true literals
-		// [0, ncls-1]
+		// index: [0, ncls-1]
 		std::vector<bool> answer;
 		
-		// std::vector<int> PosInUCB;
-		// int nextPos;
 		int numVars, numClauses;
 		bool issolved = false;
 		double elapsedTime;
@@ -71,7 +74,6 @@ class SAT_KCS{
 				for(size_t l = 0; l < ClauseInfo[c].size(); l++ ){
 					int n = ClauseInfo[c][l].varSign == 0 ? ClauseInfo[c][l].varNumber : -ClauseInfo[c][l].varNumber;
 					std::cout << n << " ";
-					//std::cout << ClauseInfo[c][l].number << " ";
 				}
 				std::cout << std::endl;
 			}	
@@ -87,5 +89,7 @@ class SAT_KCS{
 			}	
 		}
 };
+
+
 
 #endif
