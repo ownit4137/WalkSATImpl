@@ -1,76 +1,57 @@
 #include "sat.h"
 
 
-class WSAT{
-	private:
-	public:
-		WSAT(std::string path);
-		
-		// K is fixed
-		lit ClausesVec[MAXNCLS][K];
-		// [0, ncls-1]에 lit +-[1, nvar]
-		int AddTransT[MAXNVAR];
-		// [0, nvar-1]에 int [offset][mask]
-		cls VarsLocVec[MAXNVAR];						// The number of clauses where each literal is in, queue, index by at
-		// [0, nvar-1]에 cls +-[1, ncls]
-		int ClausesCost[MAXNCLS];						// The number of true literals
-		// [0, ncls-1]에 int
-		bool answer[MAXNVAR];
-		
-		// std::vector<int> PosInUCB;
-		// int nextPos;
-		int numVars, numClauses;
-		bool issolved = false;
-		double elapsedTime;
-
-		// void solve();
-		// void result();
-		// void PrintClauseInfo(){
-		// 	for(size_t c = 0; c < ClauseInfo.size(); c++ ){
-		// 		std::cout << "Clause " << c+1 << ": ";
-		// 		for(size_t l = 0; l < ClauseInfo[c].size(); l++ ){
-		// 			int n = ClauseInfo[c][l].varSign == 0 ? ClauseInfo[c][l].varNumber : -ClauseInfo[c][l].varNumber;
-		// 			std::cout << n << " ";
-		// 			//std::cout << ClauseInfo[c][l].number << " ";
-		// 		}
-		// 		std::cout << std::endl;
-		// 	}	
-		// }
-		// void PrintVarInClause(){
-		// 	for(size_t l = 0; l < VarInClause.size(); l++ ){
-		// 		std::cout << "Literal " << l+1 << ": ";
-		// 		for(size_t c = 0; c < VarInClause[l].size(); c++ ){
-		// 			int n = VarInClause[l][c].varSign == 0 ? VarInClause[l][c].clsNumber : -VarInClause[l][c].clsNumber;
-		// 			std::cout << n << " ";
-		// 		}
-		// 		std::cout << std::endl;
-		// 	}	
-		// }
-};
-
-int colision = 0;
-
-void ucbinsert(int* ucb, int clnum) {
-	for (int i = clnum % UCBSIZE; i < UCBSIZE; i++) {
-		if (ucb[i] == 0) {
-			ucb[i] = clnum;
+void WSAT_HW::ucbInsertHash(int clnum) {		// 1 ~ #cls
+	int i = clnum % UCBSIZE;
+	while (true) {
+		if (UCBArr[i] == 0) {
+			UCBArr[i] = clnum;
+			break;
 		}
-		else {
-			colision++;
+		collision++;
+		i = (i + 1) % UCBSIZE;
+	}
+}
+
+void WSAT_HW::ucbEraseHash(int clnum) {
+	int i = clnum % UCBSIZE;
+	while (true) {
+		if (UCBArr[i] == clnum) {
+			UCBArr[i] = 0;
+			break;
+		}
+		collision++;
+		i = (i + 1) % UCBSIZE;
+	}
+}
+
+void WSAT_HW::ucbInsertArr(int clnum) {
+	// std::cout << clnum << "\n\n";
+	for (int i = 0; i < ucblast; i++) {
+		if (UCBArr[i] == clnum) {
+			return;
+		}
+	}
+	UCBArr[ucblast] = clnum;
+	ucblast++;
+}
+
+void WSAT_HW::ucbEraseArr(int clnum) {
+	// UCBPosArr
+	for (int i = 0; i < ucblast; i++) {
+		if (UCBArr[i] == clnum) {
+			UCBArr[i] = UCBArr[ucblast - 1];
+			ucblast--;
+			break;
 		}
 	}
 }
 
-void ucberase(int* ucb, int clnum) {
-	for (int i = clnum % UCBSIZE; i < UCBSIZE; i++) {
-		if (ucb[i] = clnum) {
-			ucb[i] = 0;
-		}
-	}
-}
 
-WSAT::WSAT(std::string path){
+WSAT_HW::WSAT_HW(std::string path) {
 	std::ifstream fileDIMACS(path);
+
+	int maxk = 0;
 
 	if(fileDIMACS.is_open()){
 		std::string line;
@@ -78,24 +59,22 @@ WSAT::WSAT(std::string path){
 		while ((pp = fileDIMACS.peek()) == 'c') {
 			fileDIMACS.ignore(256, '\n');
 		}
-		
+
 		// parsing the first line
 		fileDIMACS >> line;	// p
 		fileDIMACS >> line;	// cnf
 		fileDIMACS >> numVars;	// nv
 		fileDIMACS >> numClauses;	// nc
 
-		// std::cout << numVars << "," << numClauses << ",";
+		// std::cout << numVars << "," << numClauses << "\n";
 
-		VarsLocVec.resize(numVars, std::vector<cls>(0));
-		ClausesVec.resize(numClauses, std::vector<lit>(0));
-		ClausesCost.resize(numClauses, 0);
-		answer.resize(numVars, 0);
+		VarInClause.resize(numVars, std::vector<cls>(0));
 
 		int nextLit;
 		int clauseCounted = 1;
 
 		char p;
+		int nv = 0;	// #var in a clause
 		while (!fileDIMACS.eof()) {
 			fileDIMACS.ignore(256, '\n');
 			p = fileDIMACS.peek();
@@ -106,288 +85,321 @@ WSAT::WSAT(std::string path){
 				fileDIMACS.ignore(256, '\n');
 				continue;
 			}
-			
-			while (true) {
-				fileDIMACS >> nextLit;
-				if (nextLit == 0){
-					break;
+			if ((p >= '0' && p <= '9') || p == '-') {
+				// std::cout << "cls " << clauseCounted << " || ";
+				while (true) {
+					fileDIMACS >> nextLit;
+					if (nextLit == 0){	// end of line
+						// lit tl;
+						// tl.varSign = true;
+						// tl.varNumber = 0;
+						// ClausesVec[clauseCounted - 1][nv] = tl;
+						
+						if (nv > maxk) {
+							maxk = nv;
+						}
+						nv = 0;
+						break;
+					}
+					// std::cout << nextLit << " ";
+
+					lit tl;
+					cls tc;
+					tl.varSign = nextLit < 0;	// - true 1 / + false 0
+					tl.varNumber = tl.varSign ? -nextLit : nextLit;	// +- 1 ~ nvar
+					tc.varSign = nextLit < 0;
+					tc.clsNumber = clauseCounted;					// +- 1 ~ ncls
+
+					ClausesVec[clauseCounted - 1][nv] = tl;
+					VarInClause[tl.varNumber - 1].push_back(tc);
+					nv++;
 				}
-
-				//ClausesVec[clauseCounted].push_back(nextLit);
-				lit tl;
-				cls tc;
-				tl.varSign = nextLit < 0;
-				tl.varNumber = tl.varSign ? -nextLit : nextLit;	// +- 1 ~ nvar
-				tc.varSign = nextLit < 0;
-				tc.clsNumber = clauseCounted;					// +- 1 ~ ncls
-
-				ClausesVec[clauseCounted - 1].push_back(tl);
-				VarsLocVec[tl.varNumber - 1].push_back(tc);
-
-				// vectorliteralclause?
+				// std::cout << "\n";
+				clauseCounted++;
 			}
-			clauseCounted++;
 		}
 		
 		if (clauseCounted - 1 != numClauses) {
-			std::cout << "#clauses error\n";
+			std::cout << "#clauses error || written: " << numClauses << " counted: " << clauseCounted - 1 << "\n";
 		}
 
 	} else {
 		std::cerr << "Cannot open file: " << path << "\n";
 	}
-	int max = 0;
-	double s = 0.0;
-	std::vector<int> count(300);
-	for (int i = 0; i < numClauses; i++) {
-		if (max < ClausesVec[i].size()) {
-			max = ClausesVec[i].size();
+
+	std::cout << "maxk: " << maxk << "\n";
+	
+	// varinclause -> varslocvec
+	/*
+	int start = 0;
+	int end = 0;
+	int i = 0;
+	for (int v = 0; v < numVars; v++) {
+		start = i;
+		for (int j = 0; j < VarInClause[v].size(); j++) {
+			VarsLocVec[i] = VarInClause[v][j];
+			i++;
 		}
-		count[ClausesVec[i].size()]++;
-		s += ClausesVec[i].size();
+		end = i;
+		AddTransT[v] = start * multiplier + end;
 	}
-	// std::cout << s / numClauses << "," << max << "\n";
-	// for (int i = 2; i <= max; i++) {
-	// 	std::cout << count[i] << ",";
-	// }
-	// std::cout << "\n";
+	VLVend = end;
+	*/
 }
 
+void WSAT_HW::info() {
+	bool issaved = true;
+	for (int v = 0; v < numVars; v++) {
+		int st = AddTransT[v] / multiplier;
+		int ed = AddTransT[v] % multiplier;
+		for (int i = st; i < ed; i++) {
+			if (VarsLocVec[i] != VarInClause[v][i - st]) {
+				issaved = false;
+				break;
+			}
+		}
+	}
+	if (!issaved) {
+		std::cout << "wrong initialization\n";
+	}
+}
 
-void WSAT::solve(){
-	srand(time(0));
+void WSAT_HW::reset() {
+	// VATArr initialize, ClausesCost, UCB reset
+	for (int i = 0; i < numVars; i++) {
+		VATArr[i] = rand() % 2 == 0 ? true : false;
+		// VATArr[i] = i % 2 == 0 ? true : false;
+	}
+
+	// for (int i = 0; i < numVars; i++) {
+	// 	std::cout << VATArr[i] << " ";
+	// }
+	// std::cout << "\n";
+
+	for (int i = 0; i < numClauses; i++) {
+		ClausesCost[i] = 0;
+		UCBArr[i] = 0;
+	}
+
+	ucblast = 0;
+}
+
+void WSAT_HW::updateCost() {
+	// Update Clause Cost [Phase1]
+	for (int c = 0; c < numClauses; c++) {
+		// std::cout << "clsnum: " << c + 1 << " || ";
+		int cost = 0;
+		for (int l = 0; l < K; l++) {	// static K
+			// (0 pos ^ 1 true || 1 neg ^ 0 false) -> true
+			
+			if (ClausesVec[c][l].varSign ^ VATArr[ClausesVec[c][l].varNumber - 1]) {
+				// std::cout << ClausesVec[c][l].varNumber << ": " << VATArr[ClausesVec[c][l].varNumber - 1] << " | ";
+				cost++;
+			}
+		}
+	
+		if (cost == 0) {
+			ucbInsertArr(c);
+		}
+		ClausesCost[c] = cost;
+		// std::cout << " cost: " << ClausesCost[c];
+		// std::cout << "\n";
+	}
+}
+
+void WSAT_HW::solve() {
 	std::chrono::steady_clock::time_point timeStart = std::chrono::steady_clock::now();
-	std::set<int> UCB;	// Unsatisfied Clause Buffer
-	// [0, ncls-1]
+	
 
-	// 1 TRY
+	// [[  TRY  ]]
 	for (size_t t = 0; t < MAX_TRIES; t++) {
-
-#ifdef DEBUG_I
 		std::cout << "TRY-"<< t + 1 << "\n";
-#endif
-		std::vector<bool> var_assignment;
-		UCB.clear();
-		int UCBList[UCBSIZE] = {0, };
 
-		// Initialize
-		for (size_t i = 0; i < numVars; i++) {
-			int b = rand()%2;
-			var_assignment.push_back(b);	// 0 false 1 true
-
-// #ifdef DEBUG
-// 			std::cout << var_assignment[i] << " ";
-// 			if (i == numVars - 1) std::cout << "\n";
-// #endif
-		}
-
-		// Update Clause Cost 
-		for (size_t c = 0; c < ClausesVec.size(); c++) {
-			ClausesCost[c] = 0;
-			for (size_t l = 0; l < ClausesVec[c].size(); l++) {
-				// (0 pos ^ 1 true || 1 neg ^ 0 false) -> true
-				if (ClausesVec[c][l].varSign ^ var_assignment[ClausesVec[c][l].varNumber - 1]) {
-					ClausesCost[c]++;
-				}
-			}
-			if (ClausesCost[c] == 0) {
-				UCB.insert(c);
-				// ucbinsert(UCBList, c);
-			}
-
-#ifdef DEBUG
-			// std::cout << "Cost of clause " << c + 1 << " is " << ClausesCost[c] << std::endl;
-#endif
-		}
-
-		// Start Flip
+		// random reset or heuristic reset
+		reset();
+		updateCost();
+		
+		// [[  FLIP  ]]
 		for (size_t f = 0; f < MAX_FLIPS; f++) {
-			// hash table ??
-			if (UCB.size() == 0){
+			// std::cout << ucblast << "\n";
+
+			// finish cond
+			if (ucblast == 0){
 				issolved = true;
-				// std::cout << f << ", ";
+				maxflip = f;
 				for (int i = 0; i < numVars; i++) {
-					answer[i] = var_assignment[i];
+					answer[i] = VATArr[i];
 				}
 				break;
 			}
-			// 코드분석
-			// 결과
-			bool doprint = false;
+
+			
+			
 			if (f % (MAX_FLIPS/PRINT_FLIP_TIMES) == 0) {
-				//doprint = true;
-#ifdef DEBUG_I
-				std::cout << "FLIP-"<< f << " UCB size: " << UCB.size() <<  "\n";
-				if (UCB.size() < 10) {
-					std::set<int>::iterator it;
-					int numm = 0;
-					for(it = UCB.begin(); it != UCB.end(); it++, numm++){
-						std::cout << *it << ": " << ClausesVec[*it].size() << " | ";
-					}
-					std::cout << "\n";
-				}
-#endif			
-				if (f > 1000000 && UCB.size() > 20) {
-					break;
+				std::cout << "FLIP-"<< f + 1 << " UCB size: " << ucblast <<  "\n";
+				// for (int i = 0; i < numVars; i++) {
+				// 	std::cout << VATArr[i] << " ";
+				// }
+				// std::cout << "\n";
+				if (ucblast < 20) {
+					printUCB();
 				}
 			}
 			
-			int cnt = 0;
-			int random_clause_idx = 0;
-			int random_clause_sel = rand() % UCB.size();
-			std::set<int>::iterator it;
+			// random ucb selection cls +-[0, ncls-1]
+			int ucidx = UCBArr[rand() % ucblast];
+			
+			// std::cout << "uc idx: " << ucidx << " selected\n";
 
-			
-			
-			for( cnt = 0, it = UCB.begin(); it != UCB.end(); it++, cnt++ ){
-				if( cnt == random_clause_sel ){
-					random_clause_idx = *it;
-				}
-			}
-			
-
-			
-#ifdef DEBUG
-			std::cout << "Choose lit in Clause " << random_clause_idx + 1 <<  std::endl;
-#endif
-
-			// Calculate break(x)
+			// [ choose var in var candidates ]
 			int flip_var = 0;
 			int break_min = 1e9;
 			int make_max = 0;
-			std::vector<int> var_candidates;
-			for (size_t l = 0; l < ClausesVec[random_clause_idx].size(); l++) {
+			// int clength = 0;
+			
+			for (size_t l = 0; l < K; l++) {
 				int break_cnt = 0;
-				int lmake = 0;
-				int var_num = ClausesVec[random_clause_idx][l].varNumber;
-
-				for (size_t c = 0; c < VarsLocVec[var_num - 1].size(); c++) {
-
-					bool islittrue = VarsLocVec[var_num - 1][c].varSign ^ var_assignment[var_num - 1];	 // 0pos true , 1neg false
-					int ccost = ClausesCost[VarsLocVec[var_num - 1][c].clsNumber - 1];
-					// !islittrue
-					if (islittrue && ccost == 1) {
+				int make_cnt = 0;
+				int var_num = ClausesVec[ucidx][l].varNumber;
+				// if (var_num == 0) {
+				// 	clength = l;
+				// 	break;
+				// }
+				
+				/*
+				int st = AddTransT[var_num - 1] / multiplier;
+				int ed = AddTransT[var_num - 1] % multiplier;
+				for (int c = st; c < ed; c++) {
+					bool islittrue = VarsLocVec[c].varSign ^ VATArr[var_num - 1];	 // 0pos true , 1neg false
+					int ccost = ClausesCost[VarsLocVec[c].clsNumber - 1];
+					
+					if (islittrue && ccost == 1) {	// break
 						break_cnt++;
+					}
+					if (!islittrue && ccost == 0) {	// make
+						make_cnt++;
+					}
+				}
+				*/
+
+				// std::cout << "var " << var_num << " is in cl ";
+				for (size_t c = 0; c < VarInClause[var_num - 1].size(); c++) {
+					// std::cout << VarInClause[var_num - 1][c].clsNumber << " ";
+
+					bool islittrue = VarInClause[var_num - 1][c].varSign ^ VATArr[var_num - 1];	 // 0pos true , 1neg false
+					int ccost = ClausesCost[VarInClause[var_num - 1][c].clsNumber - 1];
+
+					if (islittrue) {
+						if (ccost == 1) {
+							// std::cout << "[b" << VarInClause[var_num - 1][c].clsNumber << "] ";
+							break_cnt++;
+						}
 					}
 					if (!islittrue) {
 						if (ccost == 0) {
-							lmake += W1;
-						} else if (ccost == 1) {
-							lmake += W2;
+							// std::cout << "[m" << VarInClause[var_num - 1][c].clsNumber << "] ";
+							make_cnt++;
 						}
-						// lmake += ccost
 					}
-#ifdef DEBUG
-					int clsnum = VarsLocVec[var_num - 1][c].varSign ? -VarsLocVec[var_num - 1][c].clsNumber : VarsLocVec[var_num - 1][c].clsNumber;
-					//std::cout << "Var " << var_num << " in Clause " << clsnum << " var assg " << var_assignment[var_num - 1]  << " cost " << ClausesCost[VarsLocVec[var_num - 1][c].clsNumber - 1]  << " break cnt " << break_cnt << std::endl;
-#endif
 				}
-
-				if (doprint) {
-					std::cout << "Var " << var_num << " in Clause " << random_clause_idx << " break cnt " << break_cnt << " make " << lmake << "\n";
-				}
-
-				// if (break_cnt == 0) {
-				// 	break_min = 0;
-				// 	var_candidates.push_back(var_num);
-				// }
-				// else if (break_min > break_cnt) {
-				// 	flip_var = var_num;
-				// 	break_min = break_cnt;
-				// }
-				if (break_min >= break_cnt) {
+				// std::cout << "\n";
+				
+				if (break_min > break_cnt) {
 					break_min = break_cnt;
-					if (make_max <= lmake) {
-						make_max = lmake;
+					make_max = make_cnt;
+					flip_var = var_num;
+				}
+				else if (break_min == break_cnt) {
+					if (make_max < make_cnt) {
+						break_min = break_cnt;
+						make_max = make_cnt;
 						flip_var = var_num;
 					}
 				}
 			}
 
-			// choose among break 0s
-			if (var_candidates.size() != 0) {
-				// std::cout << "error\n";
-				flip_var = var_candidates[rand() % var_candidates.size()];
-				// ++lmake
-			}
-			else {
-				// int ppp = RAND_FLIP - 2 * (f / MAX_FLIPS);
-				if (rand() % 1000 < RAND_FLIP) {
-					flip_var = ClausesVec[random_clause_idx][rand() % ClausesVec[random_clause_idx].size()].varNumber;
-					// std::cout << "random!: ";
-				}
-			}
-			if (doprint) {
-				std::cout << "flip var " << flip_var << " is chosen with break val " << break_min << std::endl;
-			}
+			if (rand() % 1000 < RAND_FLIP) {
+				flip_var = ClausesVec[ucidx][rand() % K].varNumber;		// +-[1, nvar]
+				//std::cout << "Var " << flip_var << " random\n";
+			} 
+			// else {
+			// 	if (f % (MAX_FLIPS/PRINT_FLIP_TIMES) == 0) {
+			// 	std::cout << "Var " << flip_var << " in Clause " << ucidx + 1 << " break " << break_min << " make " << make_max << "\n";
+			// 	}
+			// }
 
+			/*
+			// [ actual flip ]
+			int st = AddTransT[flip_var - 1] / multiplier;
+			int ed = AddTransT[flip_var - 1] % multiplier;
+			for (int c = st; c < ed; c++) {
+				bool islittrue = VarsLocVec[c].varSign ^ VATArr[flip_var - 1];	 // 0pos true , 1neg false
+				int clsnum = VarsLocVec[c].clsNumber - 1;	// +- [0, ncls)
+				int update = 0;
 
-
-			// flip
-			for (int c = 0; c < VarsLocVec[flip_var - 1].size(); c++) {
-				bool islittrue = VarsLocVec[flip_var - 1][c].varSign ^ var_assignment[flip_var - 1];	 // 0pos true , 1neg false
-				int clsnum = VarsLocVec[flip_var - 1][c].clsNumber - 1;	// [0, ncls-1]
-				if (islittrue) {	// true lit
-					ClausesCost[clsnum]--;
-
-					if (ClausesCost[clsnum] == 0) {	
-						UCB.insert(clsnum);
+				if (islittrue) {
+					update = -1;
+					if (ClausesCost[clsnum] == 1) {
+						ucbInsertArr(clsnum);
 					}
-#ifdef DEBUG
-					int cln = VarsLocVec[flip_var - 1][c].varSign ? -clsnum-1 : clsnum+1;
-					std::cout << "after flip var " << flip_var << " in Clause " << cln << " var assg " << !var_assignment[flip_var - 1]  << " cost decreased " << ClausesCost[clsnum] << "\n";
-#endif
 				}
-				else {	// false lit
+				else {
+					update = 1;
 					if (ClausesCost[clsnum] == 0) {
-						std::set<int>::iterator it = UCB.find(clsnum);
-						if( it == UCB.end() ){
-							std::cout << "Error. Cannot find clause " << clsnum << std::endl;
-							exit(0);					
-						}
-						else {
-							UCB.erase( it );
-						}
+						ucbEraseArr(clsnum);
 					}
-					ClausesCost[clsnum]++;
-#ifdef DEBUG
-					int cln = VarsLocVec[flip_var - 1][c].varSign ? -clsnum-1 : clsnum+1;
-					std::cout << "after flip var " << flip_var << " in Clause " << cln << " var assg " << !var_assignment[flip_var - 1]  << " cost increased " << ClausesCost[clsnum] << "\n";
-#endif
 				}
+				ClausesCost[clsnum] += update;
 			}
-			var_assignment[flip_var - 1] = var_assignment[flip_var - 1] ^ true;
+			VATArr[flip_var - 1] = VATArr[flip_var - 1] ^ true;
+			*/
+
+			// std::cout << "UCB update || ";
+
+			for (size_t c = 0; c < VarInClause[flip_var - 1].size(); c++) {
+
+				bool islittrue = VarInClause[flip_var - 1][c].varSign ^ VATArr[flip_var - 1];	 // 0pos true , 1neg false
+				int clsnum = VarInClause[flip_var - 1][c].clsNumber - 1;	// [0, ncls-1]
+				int update = 0;
+				
+				if (islittrue) {
+					update = -1;
+					if (ClausesCost[clsnum] == 1) {
+						// std::cout << "+" << clsnum + 1 << ":" << ClausesCost[clsnum] << " ";
+						ucbInsertArr(clsnum);
+					}
+				}
+				else {
+					update = 1;
+					if (ClausesCost[clsnum] == 0) {
+						// std::cout << "-" << clsnum + 1 << ":" << ClausesCost[clsnum] << " ";
+						ucbEraseArr(clsnum);
+					}
+				}
+				ClausesCost[clsnum] += update;
+			}
+
+			// std::cout << "\n";
+			VATArr[flip_var - 1] = VATArr[flip_var - 1] ^ true;
 
 
-			
-
-
-
+		
 		} // end all flips
 		if (issolved) break;
 	} // end all tries
-
-#ifdef DEBEG_R
-	if ( UCB.size() != 0 ){
-		std::cout << "\n\nWalkSAT could not find a solution." << std::endl;
-	}
-#endif
+	
 	std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();
 	elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeStart).count();
 }
 
 
-// void WSAT::DPLL() {
 
-// }
-
-void WSAT::result() {
-#ifdef DEBUG_R
+void WSAT_HW::result() {
 	if (issolved) {
 		bool totresult = true;
 		for (int c = 0; c < numClauses; c++) {
 			bool cls = false;
-			for (int l = 0; l < ClausesVec[c].size(); l++) {
+			for (int l = 0; l < K; l++) {
 				// true 1 pos 0, false 0 neg 1 -> true
 				bool lit = answer[ClausesVec[c][l].varNumber - 1] ^  ClausesVec[c][l].varSign;
 				cls |= lit;
@@ -396,17 +408,10 @@ void WSAT::result() {
 		}
 		if (totresult) {
 			std::cout << "WalkSAT found a solution. Verified.\n";
-			// for (int i = 1; i <= numVars; i++) {
-			// 	std::cout << answer[i - 1] << " ";
-			// 	if (i % 100 == 0) {
-			// 		std::cout << "\n";
-			// 	}
-			// }
 		}
 	}
 	else {
 		std::cout << "WalkSAT could not find a solution.\n";
 	}
-	std::cout << "WalkSAT completed in: " << elapsedTime/1000000 << " seconds " << std::endl;
-#endif
+	std::cout << "WalkSAT completed in: " << elapsedTime/1000000 << " seconds | flip: " << maxflip << std::endl;
 }

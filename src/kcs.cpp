@@ -68,7 +68,6 @@ SAT_KCS::SAT_KCS(std::string path){
 
 
 void SAT_KCS::solve(){
-	srand(time(0));
 	std::chrono::steady_clock::time_point timeStart = std::chrono::steady_clock::now();
 	std::set<int> UCB;	// Unsatisfied Clause Buffer
 	// [0, ncls-1]
@@ -81,7 +80,6 @@ void SAT_KCS::solve(){
 #endif
 		std::vector<bool> var_assignment;
 		UCB.clear();
-		int UCBList[UCBSIZE] = {0, };
 
 		// Initialize
 		for (size_t i = 0; i < numVars; i++) {
@@ -107,6 +105,7 @@ void SAT_KCS::solve(){
 		for (size_t f = 0; f < MAX_FLIPS; f++) {
 			if (UCB.size() == 0){
 				issolved = true;
+				maxflip = f;
 				for (int i = 0; i < numVars; i++) {
 					answer[i] = var_assignment[i];
 				}
@@ -122,6 +121,10 @@ void SAT_KCS::solve(){
 				if( cnt == random_clause_sel ){
 					random_clause_idx = *it;
 				}
+			}
+
+			if (f % (MAX_FLIPS/PRINT_FLIP_TIMES) == 0) {
+				std::cout << "FLIP-"<< f << " UCB size: " << UCB.size() <<  "\n";
 			}
 			
 
@@ -145,9 +148,9 @@ void SAT_KCS::solve(){
 					}
 					if (!islittrue) {
 						if (ccost == 0) {
-							lmake += W1;
+							lmake += W;
 						} else if (ccost == 1) {
-							lmake += W2;
+							lmake += W;
 						}
 						// lmake += ccost
 					}
@@ -211,7 +214,6 @@ void SAT_KCS::solve(){
 
 
 void SAT_KCS::result() {
-#ifdef DEBUG_R
 	if (issolved) {
 		bool totresult = true;
 		for (int c = 0; c < numClauses; c++) {
@@ -230,6 +232,5 @@ void SAT_KCS::result() {
 	else {
 		std::cout << "WalkSAT could not find a solution.\n";
 	}
-	std::cout << "WalkSAT completed in: " << elapsedTime/1000000 << " seconds " << std::endl;
-#endif
+	std::cout << "WalkSAT completed in: " << elapsedTime/1000000 << " seconds | flip: " << maxflip << std::endl;
 }
