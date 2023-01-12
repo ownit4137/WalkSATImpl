@@ -1,28 +1,33 @@
 #include "sat.h"
+#include <string.h>
 
 
-void WSAT_HW::ucbInsertHash(int clnum) {		// 1 ~ #cls
+void WSAT_HW::ucbInsertHash(int clnum) {		// 0 ~ #cls-1
 	int i = clnum % UCBSIZE;
-	while (true) {
+	for (int t = 0; t < UCBSIZE; t++) {
 		if (UCBArr[i] == 0) {
-			UCBArr[i] = clnum;
-			break;
+			UCBArr[i] = clnum + 1;
+			ucblast++;
+			return;
 		}
 		collision++;
 		i = (i + 1) % UCBSIZE;
 	}
+	std::cout << "Error: UCB is full\n";
 }
 
 void WSAT_HW::ucbEraseHash(int clnum) {
 	int i = clnum % UCBSIZE;
-	while (true) {
-		if (UCBArr[i] == clnum) {
+	for (int t = 0; t < UCBSIZE; t++) {
+		if (UCBArr[i] == clnum + 1) {
 			UCBArr[i] = 0;
-			break;
+			ucblast--;
+			return;
 		}
 		collision++;
 		i = (i + 1) % UCBSIZE;
 	}
+	std::cout << "Error: cannot find entry\n";
 }
 
 void WSAT_HW::ucbInsertArr(int clnum) {
@@ -32,6 +37,11 @@ void WSAT_HW::ucbInsertArr(int clnum) {
 			return;
 		}
 	}
+	UCBArr[ucblast] = clnum;
+	ucblast++;
+}
+
+void WSAT_HW::ucbInsertArrLast(int clnum) {
 	UCBArr[ucblast] = clnum;
 	ucblast++;
 }
@@ -66,15 +76,16 @@ WSAT_HW::WSAT_HW(std::string path) {
 		fileDIMACS >> numVars;	// nv
 		fileDIMACS >> numClauses;	// nc
 
-		// std::cout << numVars << "," << numClauses << "\n";
+		std::cout << numVars << ", " << numClauses << "\n";
 
-		VarInClause.resize(numVars, std::vector<cls>(0));
+		// VarInClause.resize(numVars, std::vector<cls>(0));
+		memset(VarsLocVec, 0, sizeof(VarsLocVec));
 
 		int nextLit;
 		int clauseCounted = 1;
 
 		char p;
-		int nv = 0;	// #var in a clause
+		int nvinc = 0;	// #var in a clause
 		while (!fileDIMACS.eof()) {
 			fileDIMACS.ignore(256, '\n');
 			p = fileDIMACS.peek();
@@ -95,10 +106,10 @@ WSAT_HW::WSAT_HW(std::string path) {
 						// tl.varNumber = 0;
 						// ClausesVec[clauseCounted - 1][nv] = tl;
 						
-						if (nv > maxk) {
-							maxk = nv;
+						if (nvinc > maxk) {
+							maxk = nvinc;
 						}
-						nv = 0;
+						nvinc = 0;
 						break;
 					}
 					// std::cout << nextLit << " ";
@@ -110,9 +121,21 @@ WSAT_HW::WSAT_HW(std::string path) {
 					tc.varSign = nextLit < 0;
 					tc.clsNumber = clauseCounted;					// +- 1 ~ ncls
 
-					ClausesVec[clauseCounted - 1][nv] = tl;
-					VarInClause[tl.varNumber - 1].push_back(tc);
-					nv++;
+					ClausesVec[clauseCounted - 1][nvinc] = tl;
+					
+					for (int i = 0; i < R; i++) {
+						if (VarsLocVec[tl.varNumber - 1][i].clsNumber == 0) {
+							VarsLocVec[tl.varNumber - 1][i] = tc;
+							break;
+						}
+						if (i == R - 1) {
+							std::cout << "R excessed at " << tl.varNumber << "\n";
+						}
+					}
+					
+					// VarInClause[tl.varNumber - 1].push_back(tc);
+
+					nvinc++;
 				}
 				// std::cout << "\n";
 				clauseCounted++;
@@ -153,10 +176,10 @@ void WSAT_HW::info() {
 		int st = AddTransT[v] / multiplier;
 		int ed = AddTransT[v] % multiplier;
 		for (int i = st; i < ed; i++) {
-			if (VarsLocVec[i] != VarInClause[v][i - st]) {
-				issaved = false;
-				break;
-			}
+			// if (VarsLocVec[i] != VarInClause[v][i - st]) {
+			// 	issaved = false;
+			// 	break;
+			// }
 		}
 	}
 	if (!issaved) {
@@ -176,10 +199,8 @@ void WSAT_HW::reset() {
 	// }
 	// std::cout << "\n";
 
-	for (int i = 0; i < numClauses; i++) {
-		ClausesCost[i] = 0;
-		UCBArr[i] = 0;
-	}
+	memset(ClausesCost, 0, sizeof(ClausesCost));
+	memset(UCBArr, 0, sizeof(UCBArr));
 
 	ucblast = 0;
 }
@@ -199,7 +220,8 @@ void WSAT_HW::updateCost() {
 		}
 	
 		if (cost == 0) {
-			ucbInsertArr(c);
+			ucbInsertHash(c);
+			//ucbInsertArrLast(c);
 		}
 		ClausesCost[c] = cost;
 		// std::cout << " cost: " << ClausesCost[c];
@@ -241,13 +263,28 @@ void WSAT_HW::solve() {
 				// 	std::cout << VATArr[i] << " ";
 				// }
 				// std::cout << "\n";
-				if (ucblast < 20) {
+				if (ucblast < 5) {
 					printUCB();
 				}
 			}
 			
 			// random ucb selection cls +-[0, ncls-1]
-			int ucidx = UCBArr[rand() % ucblast];
+			int ucidx = -1;
+			for (int t = 0; t < UCBSIZE; t++) {
+				ucidx = UCBArr[rand() % UCBSIZE];	// 1~ncls
+				if (ucidx != 0) {
+					ucidx--;
+					if (f % (MAX_FLIPS/PRINT_FLIP_TIMES) == 0) {
+						std::cout << "t is " << t;
+						std::cout << " | collision is " << collision << "\n";
+					}
+					break;
+				}
+			}
+			if (ucidx == -1) {
+				std::cout << "next ucb entry not found\n";
+			}
+			
 			
 			// std::cout << "uc idx: " << ucidx << " selected\n";
 
@@ -261,27 +298,8 @@ void WSAT_HW::solve() {
 				int break_cnt = 0;
 				int make_cnt = 0;
 				int var_num = ClausesVec[ucidx][l].varNumber;
-				// if (var_num == 0) {
-				// 	clength = l;
-				// 	break;
-				// }
 				
 				/*
-				int st = AddTransT[var_num - 1] / multiplier;
-				int ed = AddTransT[var_num - 1] % multiplier;
-				for (int c = st; c < ed; c++) {
-					bool islittrue = VarsLocVec[c].varSign ^ VATArr[var_num - 1];	 // 0pos true , 1neg false
-					int ccost = ClausesCost[VarsLocVec[c].clsNumber - 1];
-					
-					if (islittrue && ccost == 1) {	// break
-						break_cnt++;
-					}
-					if (!islittrue && ccost == 0) {	// make
-						make_cnt++;
-					}
-				}
-				*/
-
 				// std::cout << "var " << var_num << " is in cl ";
 				for (size_t c = 0; c < VarInClause[var_num - 1].size(); c++) {
 					// std::cout << VarInClause[var_num - 1][c].clsNumber << " ";
@@ -289,17 +307,32 @@ void WSAT_HW::solve() {
 					bool islittrue = VarInClause[var_num - 1][c].varSign ^ VATArr[var_num - 1];	 // 0pos true , 1neg false
 					int ccost = ClausesCost[VarInClause[var_num - 1][c].clsNumber - 1];
 
-					if (islittrue) {
-						if (ccost == 1) {
-							// std::cout << "[b" << VarInClause[var_num - 1][c].clsNumber << "] ";
-							break_cnt++;
-						}
+					if (islittrue && (ccost == 1)) {
+						// std::cout << "[b" << VarInClause[var_num - 1][c].clsNumber << "] ";
+						break_cnt++;
 					}
-					if (!islittrue) {
-						if (ccost == 0) {
-							// std::cout << "[m" << VarInClause[var_num - 1][c].clsNumber << "] ";
-							make_cnt++;
-						}
+					if (!islittrue && (ccost == 0)) {
+						// std::cout << "[m" << VarInClause[var_num - 1][c].clsNumber << "] ";
+						make_cnt++;
+					}
+				}
+				// std::cout << "\n";
+				*/
+				
+				// std::cout << "var " << var_num << " is in cl ";
+				for (size_t c = 0; VarsLocVec[var_num - 1][c].clsNumber != 0; c++) {
+					// std::cout << VarsLocVec[var_num - 1][c].clsNumber << " ";
+
+					bool islittrue = VarsLocVec[var_num - 1][c].varSign ^ VATArr[var_num - 1];	 // 0pos true , 1neg false
+					int ccost = ClausesCost[VarsLocVec[var_num - 1][c].clsNumber - 1];
+
+					if (islittrue && (ccost == 1)) {
+						// std::cout << "[b" << VarsLocVec[var_num - 1][c].clsNumber << "] ";
+						break_cnt++;
+					}
+					if (!islittrue && (ccost == 0)) {
+						// std::cout << "[m" << VarsLocVec[var_num - 1][c].clsNumber << "] ";
+						make_cnt++;
 					}
 				}
 				// std::cout << "\n";
@@ -318,7 +351,8 @@ void WSAT_HW::solve() {
 				}
 			}
 
-			if (rand() % 1000 < RAND_FLIP) {
+			int rf = RAND_FLIP - (f / MAX_FLIPS) * 200;
+			if (rand() % 1000 < rf) {
 				flip_var = ClausesVec[ucidx][rand() % K].varNumber;		// +-[1, nvar]
 				//std::cout << "Var " << flip_var << " random\n";
 			} 
@@ -356,6 +390,32 @@ void WSAT_HW::solve() {
 
 			// std::cout << "UCB update || ";
 
+
+			for (size_t c = 0; c < VarsLocVec[flip_var - 1][c].clsNumber != 0; c++) {
+
+				bool islittrue = VarsLocVec[flip_var - 1][c].varSign ^ VATArr[flip_var - 1];	 // 0pos true , 1neg false
+				int clsnum = VarsLocVec[flip_var - 1][c].clsNumber - 1;	// [0, ncls-1]
+				int update = 0;
+				
+				if (islittrue) {
+					update = -1;
+					if (ClausesCost[clsnum] == 1) {
+						// std::cout << "+" << clsnum + 1 << ":" << ClausesCost[clsnum] << " ";
+						ucbInsertHash(clsnum);
+						//ucbInsertArr(clsnum);
+					}
+				}
+				else {
+					update = 1;
+					if (ClausesCost[clsnum] == 0) {
+						// std::cout << "-" << clsnum + 1 << ":" << ClausesCost[clsnum] << " ";
+						ucbEraseHash(clsnum);
+						// ucbEraseArr(clsnum);
+					}
+				}
+				ClausesCost[clsnum] += update;
+			}
+			/*
 			for (size_t c = 0; c < VarInClause[flip_var - 1].size(); c++) {
 
 				bool islittrue = VarInClause[flip_var - 1][c].varSign ^ VATArr[flip_var - 1];	 // 0pos true , 1neg false
@@ -378,16 +438,19 @@ void WSAT_HW::solve() {
 				}
 				ClausesCost[clsnum] += update;
 			}
+			*/
 
 			// std::cout << "\n";
 			VATArr[flip_var - 1] = VATArr[flip_var - 1] ^ true;
-
-
-		
 		} // end all flips
 		if (issolved) break;
+
+		std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();
+		elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeStart).count();
+		std::cout << "TRY-" << t + 1 << " finished " << elapsedTime/1000000 << "s elapsed\n";
+		maxflip = MAX_FLIPS;
 	} // end all tries
-	
+
 	std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();
 	elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeStart).count();
 }
@@ -408,6 +471,9 @@ void WSAT_HW::result() {
 		}
 		if (totresult) {
 			std::cout << "WalkSAT found a solution. Verified.\n";
+		}
+		else {
+			std::cout << "Wrong solution.\n";
 		}
 	}
 	else {

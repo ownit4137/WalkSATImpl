@@ -18,18 +18,18 @@
 #include <unistd.h>
 
 //kcs
-#define MAX_TRIES 1
-#define MAX_FLIPS 500
-#define UCBSIZE 100000
+#define MAX_TRIES 10
+#define MAX_FLIPS 2100000
+#define UCBSIZE 1000
 #define PRINT_FLIP_TIMES 5
 #define RAND_FLIP 300
 #define W 0
 #define DEBUG_FV
 #define K 3
-#define R 100
-#define MAXNCLS 1000000
-#define MAXNVAR 100000
-#define MAXUCB 
+#define R 50
+#define MAXNCLS 1500
+#define MAXNVAR 300
+#define VLSIZE 1000000
 
 
 struct lit {
@@ -101,6 +101,7 @@ class WSAT_HW {
 		void ucbInsertHash(int);
 		void ucbEraseHash(int);
 		void ucbInsertArr(int);
+		void ucbInsertArrLast(int);
 		void ucbEraseArr(int);
 		void reset();
 		void updateCost();
@@ -112,17 +113,15 @@ class WSAT_HW {
 		// [0, ncls-1]에 lit +-[1, nvar]
 		int AddTransT[MAXNVAR];
 		// [0, nvar-1]에 int [offset][mask]
-		cls VarsLocVec[MAXNVAR];						// The number of clauses where each literal is in, queue, index by at
+		cls VarsLocVec[MAXNVAR][R];						// The number of clauses where each literal is in, queue, index by at
 		// [0, nvar-1]에 cls +-[1, ncls]
 		int ClausesCost[MAXNCLS];						// The number of true literals
 		// [0, ncls-1]에 int
 		// big int UCBArr[MAXNCLS];
 		bool answer[MAXNVAR];
 
-		int pndif[MAXNVAR];
-		
 		bool VATArr[MAXNVAR];	// FPGA -> 1bit
-		int UCBArr[MAXNCLS];	// cls +-[0, ncls-1]
+		int UCBArr[UCBSIZE];	// cls +-[0, ncls-1]
 
 		std::vector<std::vector<cls>> VarInClause;		// The number of clauses where each literal is in
 		// index: [0, nvar-1] element: cls +-[1, ncls]

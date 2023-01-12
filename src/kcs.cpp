@@ -16,7 +16,7 @@ SAT_KCS::SAT_KCS(std::string path){
 		fileDIMACS >> numVars;	// nv
 		fileDIMACS >> numClauses;	// nc
 
-		// std::cout << numVars << "," << numClauses << ",";
+		std::cout << numVars << "," << numClauses << ",";
 
 		VarInClause.resize(numVars, std::vector<cls>(0));
 		ClauseInfo.resize(numClauses, std::vector<lit>(0));
@@ -75,14 +75,12 @@ void SAT_KCS::solve(){
 	// 1 TRY
 	for (size_t t = 0; t < MAX_TRIES; t++) {
 
-#ifdef DEBUG_I
 		std::cout << "TRY-"<< t + 1 << "\n";
-#endif
 		std::vector<bool> var_assignment;
 		UCB.clear();
 
 		// Initialize
-		for (size_t i = 0; i < numVars; i++) {
+		for (int i = 0; i < numVars; i++) {
 			int b = rand()%2;
 			var_assignment.push_back(b);	// 0 false 1 true
 		}
@@ -124,7 +122,7 @@ void SAT_KCS::solve(){
 			}
 
 			if (f % (MAX_FLIPS/PRINT_FLIP_TIMES) == 0) {
-				std::cout << "FLIP-"<< f << " UCB size: " << UCB.size() <<  "\n";
+				std::cout << "FLIP-"<< f + 1 << " UCB size: " << UCB.size() <<  "\n";
 			}
 			
 
@@ -135,7 +133,7 @@ void SAT_KCS::solve(){
 			std::vector<int> var_candidates;
 			for (size_t l = 0; l < ClauseInfo[random_clause_idx].size(); l++) {
 				int break_cnt = 0;
-				int lmake = 0;
+				int make_cnt = 0;
 				int var_num = ClauseInfo[random_clause_idx][l].varNumber;
 
 				for (size_t c = 0; c < VarInClause[var_num - 1].size(); c++) {
@@ -143,22 +141,23 @@ void SAT_KCS::solve(){
 					bool islittrue = VarInClause[var_num - 1][c].varSign ^ var_assignment[var_num - 1];	 // 0pos true , 1neg false
 					int ccost = ClauseCost[VarInClause[var_num - 1][c].clsNumber - 1];
 					// !islittrue
-					if (islittrue && ccost == 1) {
+					if (islittrue && (ccost == 1)) {
 						break_cnt++;
 					}
-					if (!islittrue) {
-						if (ccost == 0) {
-							lmake += W;
-						} else if (ccost == 1) {
-							lmake += W;
-						}
-						// lmake += ccost
+					if (!islittrue && (ccost == 0)) {
+						make_cnt++;
 					}
 				}
-				if (break_min >= break_cnt) {
+
+				if (break_min > break_cnt) {
 					break_min = break_cnt;
-					if (make_max <= lmake) {
-						make_max = lmake;
+					make_max = make_cnt;
+					flip_var = var_num;
+				}
+				else if (break_min == break_cnt) {
+					if (make_max < make_cnt) {
+						break_min = break_cnt;
+						make_max = make_cnt;
 						flip_var = var_num;
 					}
 				}
@@ -174,7 +173,7 @@ void SAT_KCS::solve(){
 				}
 			}
 			// flip
-			for (int c = 0; c < VarInClause[flip_var - 1].size(); c++) {
+			for (size_t c = 0; c < VarInClause[flip_var - 1].size(); c++) {
 				bool islittrue = VarInClause[flip_var - 1][c].varSign ^ var_assignment[flip_var - 1];	 // 0pos true , 1neg false
 				int clsnum = VarInClause[flip_var - 1][c].clsNumber - 1;	// [0, ncls-1]
 				if (islittrue) {	// true lit
@@ -201,13 +200,13 @@ void SAT_KCS::solve(){
 			var_assignment[flip_var - 1] = var_assignment[flip_var - 1] ^ true;
 		} // end all flips
 		if (issolved) break;
+		
+		std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();
+		elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeStart).count();
+		std::cout << "TRY-" << t + 1 << " finished " << elapsedTime/1000000 << "s elapsed\n";
+		maxflip = MAX_FLIPS;
 	} // end all tries
 
-#ifdef DEBEG_R
-	if ( UCB.size() != 0 ){
-		std::cout << "\n\nWalkSAT could not find a solution." << std::endl;
-	}
-#endif
 	std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();
 	elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeStart).count();
 }
@@ -218,7 +217,7 @@ void SAT_KCS::result() {
 		bool totresult = true;
 		for (int c = 0; c < numClauses; c++) {
 			bool cls = false;
-			for (int l = 0; l < ClauseInfo[c].size(); l++) {
+			for (size_t l = 0; l < ClauseInfo[c].size(); l++) {
 				// true 1 pos 0, false 0 neg 1 -> true
 				bool lit = answer[ClauseInfo[c][l].varNumber - 1] ^  ClauseInfo[c][l].varSign;
 				cls |= lit;
